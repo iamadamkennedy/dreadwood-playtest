@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreadwood Playtest</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #fff;
+            text-align: center;
+        }
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(9, 50px);
+            gap: 1px;
+            background-color: #333;
+            margin: 20px auto;
+            width: fit-content;
+            padding: 5px;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: #555;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .guardian { background-color: #fff; color: #000; }
+        .bloodwell { background-color: #ff0000; color: #fff; }
+        .tombstone { background-color: #888; }
+        .carcass { background-color: #666; }
+        .grave-dust { background-color: #800080; }
+        .dynamite { background-color: #ff4500; }
+        .cursed { border: 2px solid #800080; }
+        #controls, #log {
+            margin: 10px;
+        }
+        button {
+            margin: 5px;
+            padding: 5px 10px;
+            background-color: #444;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover { background-color: #666; }
+        #log { height: 200px; overflow-y: scroll; background-color: #222; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Dreadwood Playtest</h1>
+    <div id="game-info">
+        <p>Current Player: <span id="current-player">P1</span> | AP Left: <span id="ap-left">4</span> | Turn: <span id="turn">1</span></p>
+        <p>Obstacles: <span id="obstacle-count">0</span>/12 | Dread Fates: <input type="checkbox" id="dread-fates"> Use</p>
+    </div>
+    <div id="grid"></div>
+    <div id="controls">
+        <button onclick="selectAction('move')">Move</button>
+        <button onclick="selectAction('turn')">Turn</button>
+        <button onclick="selectAction('shoot')">Shoot</button>
+        <button onclick="selectAction('throw')">Throw Obstacle</button>
+        <button onclick="selectAction('ability')">Use Ability</button>
+        <button onclick="endTurn()">End Turn</button>
+    </div>
+    <div id="log"></div>
+
+    <script>
+        const GRID_SIZE = 9;
+        const players = ['P1', 'P2', 'P3', 'P4'];
+        const classes = ['Sheriff', 'Vigilante', 'Outlaw', 'Bounty Hunter'];
+        const colors = { 'P1': 'white', 'P2': 'blue', 'P3': 'red', 'P4': 'green' };
+        const apPerTurn = { 1: 4, 2: 5, 3: 6, 4: 8 };
+        let gameState = {
+            currentPlayer: 0,
+            turn: 1,
+            ap: apPerTurn[1],
+            playerCount: 2,
+            guardians: {},
+            bloodwells: {},
+            obstacles: [],
+            obstacleCount: 0,
+            selectedGuardian: null,
+            selectedAction: null,
+            dreadFates: false,
+            playerClasses: {},
+            playerFates: {},
+            cursed: {}
+        };
+
+        const layouts = {
+            '2P': {
+                guardians: {
+                    'P1': [{ pos: 'A2', facing: 'S' }, { pos: 'C4', facing: 'S' }],
+                    'P2': [{ pos: 'F7', facing: 'N' }, { pos: 'H9', facing: 'N' }]
+                },
+                bloodwells: {
+                    'P1': ['B1', 'D3', 'F2'],
+                    'P2': ['G6', 'I8', 'D9']
+                },
+                obstacles: [
+                    { type: 'Tombstone', pos: 'E5' },
+                    { type: 'Carcass', pos: 'D5' },
+                    { type: 'Grave Dust', pos: 'F5' },
+                    { type: 'Dynamite', pos: 'E4' }
+                ]
+            },
+            '3P': {
+                guardians: {
+                    'P1': [{ pos: 'A3', facing: 'E' }, { pos: 'C7', facing: 'E' }],
+                    'P2': [{ pos: 'C2', facing: 'S' }, { pos: 'E3', facing: 'S' }],
+                    'P3': [{ pos: 'G3', facing: 'W' }, { pos: 'I7', facing: 'W' }]
+                },
+                bloodwells: {
+                    'P1': ['B2', 'D6', 'A8'],
+                    'P2': ['B1', 'D4', 'F2'],
+                    'P3': ['H2', 'F6', 'I8']
+                },
+                obstacles: [
+                    { type: 'Tombstone', pos: 'E5' },
+                    { type: 'Carcass', pos: 'D5' },
+                    { type: 'Grave Dust', pos: 'F5' },
+                    { type: 'Dynamite', pos: 'E4' },
+                    { type: 'Tombstone', pos: 'E6' }
+                ]
+            },
+            '4P': {
+                guardians: {
+                    'P1': [{ pos: 'A2', facing: 'S' }, { pos: 'C4', facing: 'S' }],
+                    'P2': [{ pos: 'F2', facing: 'S' }, { pos: 'H4', facing: 'S' }],
+                    'P3': [{ pos: 'A7', facing: 'N' }, { pos: 'C9', facing: 'N' }],
+                    'P4': [{ pos: 'F7', facing: 'N' }, { pos: 'H9', facing: 'N' }]
+                },
+                bloodwells: {
+                    'P1': ['B1', 'D3', 'B4'],
+                    'P2': ['G1', 'I3', 'G4'],
+                    'P3': ['B6', 'D8', 'B9'],
+                    'P4': ['G6', 'I8', 'G9']
+                },
+                obstacles: [
+                    { type: 'Tombstone', pos: 'E5' },
+                    { type: 'Carcass', pos: 'D6' },
+                    { type: 'Grave Dust', pos: 'F4' },
+                    { type: 'Dynamite', pos: 'G3' },
+                    { type: 'Tombstone', pos: 'B5' },
+                    { type: 'Carcass', pos: 'H5' }
+                ]
+            }
+        };
+
+        const dreadFates = [
+            { name: 'Bloodlust', effect: '+1 AP on well shot, once/turn (max 6)' },
+            { name: 'Grave Whisper', effect: 'Throw Grave Dust 0 AP, once/turn' },
+            { name: 'Dust Runner', effect: 'Move through Carcass without stopping' },
+            { name: 'Iron Will', effect: 'Immune to curses' },
+            { name: 'Stake Driver', effect: 'Shoot obstacle 2 AP (normally 3)' },
+            { name: 'Night Stalker', effect: '+1 space to first move/turn (max 5)' },
+            { name: 'Wanted Poster', effect: 'Start with 2 silver slugs' },
+            { name: 'Crypt Keeper', effect: 'First Tombstone immovable' },
+            { name: 'Quick Draw', effect: 'First shot/turn 2 AP (normally 3)' },
+            { name: 'Vampire’s Gambit', effect: 'Blood Ritual 2 AP (normally 3)' },
+            { name: 'Shadow Veil', effect: 'Silver slugs on you cost 4 AP (normally 3)' },
+            { name: 'Dread’s Edge', effect: '+1 AP on Guardian elimination, once/game (max 6)' }
+        ];
+
+        function initGame() {
+            const playerCount = prompt("Enter number of players (2-4):", "2");
+            gameState.playerCount = parseInt(playerCount);
+            if (gameState.playerCount < 2 || gameState.playerCount > 4) {
+                alert("Invalid player count. Defaulting to 2 players.");
+                gameState.playerCount = 2;
+            }
+
+            const layout = layouts[`${gameState.playerCount}P`];
+            gameState.guardians = {};
+            gameState.bloodwells = {};
+            gameState.obstacles = layout.obstacles;
+            gameState.obstacleCount = layout.obstacles.length;
+
+            for (let i = 1; i <= gameState.playerCount; i++) {
+                const player = `P${i}`;
+                gameState.guardians[player] = layout.guardians[player].map((g, idx) => ({
+                    id: `${player}G${idx + 1}`,
+                    pos: g.pos,
+                    facing: g.facing,
+                    alive: true
+                }));
+                gameState.bloodwells[player] = layout.bloodwells[player];
+                gameState.playerClasses[player] = prompt(`Choose class for ${player} (Sheriff, Vigilante, Outlaw, Bounty Hunter):`, "Sheriff");
+                gameState.cursed[`${player}G1`] = false;
+                gameState.cursed[`${player}G2`] = false;
+            }
+
+            if (gameState.playerCount === 4) {
+                const p4Well = prompt("P4: Place free Tombstone adjacent to a Bloodwell (e.g., I7 next to I8):", "I7");
+                gameState.obstacles.push({ type: 'Tombstone', pos: p4Well });
+                gameState.obstacleCount++;
+            }
+
+            gameState.dreadFates = document.getElementById('dread-fates').checked;
+            if (gameState.dreadFates) {
+                const shuffledFates = dreadFates.sort(() => Math.random() - 0.5);
+                for (let i = 1; i <= gameState.playerCount; i++) {
+                    gameState.playerFates[`P${i}`] = shuffledFates[i - 1];
+                    log(`${players[i - 1]} drew Dread Fate: ${gameState.playerFates[`P${i}`].name}`);
+                }
+            }
+
+            renderGrid();
+            updateGameInfo();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            for (let row = 1; row <= GRID_SIZE; row++) {
+                for (let col = 1; col <= GRID_SIZE; col++) {
+                    const pos = String.fromCharCode(64 + col) + row;
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = pos;
+                    cell.onclick = () => selectCell(pos);
+
+                    let content = '';
+                    for (let player in gameState.guardians) {
+                        const guardian = gameState.guardians[player].find(g => g.pos === pos && g.alive);
+                        if (guardian) {
+                            content = guardian.id;
+                            cell.classList.add('guardian');
+                            if (gameState.cursed[guardian.id]) cell.classList.add('cursed');
+                            break;
+                        }
+                    }
+                    if (!content) {
+                        for (let player in gameState.bloodwells) {
+                            if (gameState.bloodwells[player].includes(pos)) {
+                                content = `${player}B`;
+                                cell.classList.add('bloodwell');
+                                break;
+                            }
+                        }
+                    }
+                    if (!content) {
+                        const obstacle = gameState.obstacles.find(o => o.pos === pos);
+                        if (obstacle) {
+                            content = obstacle.type.charAt(0);
+                            cell.classList.add(obstacle.type.toLowerCase().replace(' ', '-'));
+                        }
+                    }
+                    cell.textContent = content;
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        function selectCell(pos) {
+            if (!gameState.selectedAction) return;
+            const player = players[gameState.currentPlayer];
+            if (!gameState.selectedGuardian) {
+                const guardian = gameState.guardians[player].find(g => g.pos === pos && g.alive);
+                if (guardian) {
+                    gameState.selectedGuardian = guardian;
+                    log(`${player} selected ${guardian.id}`);
+                }
+            } else {
+                executeAction(pos);
+            }
+        }
+
+        function selectAction(action) {
+            gameState.selectedAction = action;
+            gameState.selectedGuardian = null;
+            log(`Selected action: ${action}`);
+        }
+
+        function executeAction(targetPos) {
+            const player = players[gameState.currentPlayer];
+            const guardian = gameState.selectedGuardian;
+            const action = gameState.selectedAction;
+            let apCost = 0;
+
+            if (gameState.cursed[guardian.id] && action !== 'shoot') {
+                log(`${guardian.id} is cursed and cannot ${action}!`);
+                return;
+            }
+
+            if (action === 'move') {
+                apCost = 1;
+                if (gameState.ap >= apCost) {
+                    const newPos = canMove(guardian, targetPos);
+                    if (newPos) {
+                        guardian.pos = targetPos;
+                        gameState.ap -= apCost;
+                        log(`${guardian.id} moved to ${targetPos}`);
+                    }
+                }
+            } else if (action === 'turn') {
+                apCost = 1;
+                if (gameState.ap >= apCost) {
+                    const newFacing = prompt("Enter new facing (N, S, E, W):", guardian.facing);
+                    if (['N', 'S', 'E', 'W'].includes(newFacing)) {
+                        guardian.facing = newFacing;
+                        gameState.ap -= apCost;
+                        log(`${guardian.id} turned to face ${newFacing}`);
+                    }
+                }
+            } else if (action === 'shoot') {
+                apCost = 3;
+                if (gameState.ap >= apCost) {
+                    const target = canShoot(guardian, targetPos);
+                    if (target) {
+                        handleShot(guardian, targetPos);
+                        gameState.ap -= apCost;
+                    }
+                }
+            } else if (action === 'throw') {
+                const obstacleType = prompt("Choose obstacle to throw (Tombstone, Carcass, Grave Dust, Dynamite):", "Tombstone");
+                apCost = obstacleType === 'Dynamite' ? 2 : 1;
+                if (gameState.ap >= apCost && gameState.obstacleCount < 12) {
+                    const canThrow = canThrowObstacle(guardian, targetPos, obstacleType);
+                    if (canThrow) {
+                        gameState.obstacles.push({ type: obstacleType, pos: targetPos });
+                        gameState.obstacleCount++;
+                        gameState.ap -= apCost;
+                        log(`${guardian.id} threw ${obstacleType} to ${targetPos}`);
+                    }
+                } else if (gameState.obstacleCount >= 12) {
+                    log("Obstacle limit (12) reached!");
+                }
+            } else if (action === 'ability') {
+                const ability = gameState.playerClasses[player];
+                if (ability === 'Sheriff') {
+                    apCost = 3;
+                    if (gameState.ap >= apCost) {
+                        const deadGuardian = gameState.guardians[player].find(g => !g.alive);
+                        if (deadGuardian) {
+                            deadGuardian.alive = true;
+                            deadGuardian.pos = targetPos;
+                            gameState.ap -= apCost;
+                            log(`${player} used Order Restored: Revived ${deadGuardian.id} at ${targetPos}`);
+                        }
+                    }
+                } else if (ability === 'Vigilante') {
+                    log("Vengeance is Mine triggers on opponent shot!");
+                } else if (ability === 'Outlaw') {
+                    const subAction = prompt("Choose Outlaw ability (Hand Cannon, Rampage):", "Hand Cannon");
+                    apCost = subAction === 'Hand Cannon' ? 5 : 3;
+                    if (gameState.ap >= apCost) {
+                        if (subAction === 'Hand Cannon') {
+                            handleHandCannon(guardian, targetPos);
+                        } else {
+                            handleRampage(guardian);
+                        }
+                        gameState.ap -= apCost;
+                    }
+                } else if (ability === 'Bounty Hunter') {
+                    apCost = 3;
+                    if (gameState.ap >= apCost) {
+                        const target = canShoot(guardian, targetPos);
+                        if (target && target.includes('B')) {
+                            gameState.ap -= apCost;
+                            log(`${player} used Contract Payoff: Shot ${target}, +5 AP next turn`);
+                            // Implement AP boost logic for next turn
+                        }
+                    }
+                }
+            }
+
+            gameState.selectedGuardian = null;
+            gameState.selectedAction = null;
+            renderGrid();
+            updateGameInfo();
+        }
+
+        function canMove(guardian, targetPos) {
+            const [targetCol, targetRow] = [targetPos.charCodeAt(0) - 64, parseInt(targetPos[1])];
+            const [currentCol, currentRow] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
+            const direction = guardian.facing;
+            if (direction === 'N' && targetRow < currentRow && targetCol === currentCol) return true;
+            if (direction === 'S' && targetRow > currentRow && targetCol === currentCol) return true;
+            if (direction === 'E' && targetCol > currentCol && targetRow === currentRow) return true;
+            if (direction === 'W' && targetCol < currentCol && targetRow === currentRow) return true;
+            log("Invalid move direction!");
+            return false;
+        }
+
+        function canShoot(guardian, targetPos) {
+            const [targetCol, targetRow] = [targetPos.charCodeAt(0) - 64, parseInt(targetPos[1])];
+            const [currentCol, currentRow] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
+            const direction = guardian.facing;
+            let path = [];
+            if (direction === 'N' && targetCol === currentCol && targetRow < currentRow) {
+                for (let r = currentRow - 1; r >= targetRow; r--) path.push(`${String.fromCharCode(64 + currentCol)}${r}`);
+            } else if (direction === 'S' && targetCol === currentCol && targetRow > currentRow) {
+                for (let r = currentRow + 1; r <= targetRow; r++) path.push(`${String.fromCharCode(64 + currentCol)}${r}`);
+            } else if (direction === 'E' && targetRow === currentRow && targetCol > currentCol) {
+                for (let c = currentCol + 1; c <= targetCol; c++) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
+            } else if (direction === 'W' && targetRow === currentRow && targetCol < currentCol) {
+                for (let c = currentCol - 1; c >= targetCol; c--) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
+            } else {
+                log("Invalid shot direction!");
+                return null;
+            }
+
+            for (let pos of path.slice(0, -1)) {
+                if (gameState.obstacles.some(o => o.pos === pos && o.type !== 'Grave Dust')) {
+                    log("Shot blocked by obstacle!");
+                    return null;
+                }
+            }
+            return path[path.length - 1];
+        }
+
+        function handleShot(guardian, targetPos) {
+            const player = players[gameState.currentPlayer];
+            const target = gameState.bloodwells[player].includes(targetPos) ? `${player}B` : null;
+            if (target) {
+                log("Cannot shoot your own Bloodwell!");
+                return;
+            }
+
+            for (let p in gameState.bloodwells) {
+                if (p !== player && gameState.bloodwells[p].includes(targetPos)) {
+                    gameState.bloodwells[p] = gameState.bloodwells[p].filter(pos => pos !== targetPos);
+                    log(`${guardian.id} shot ${p}'s Bloodwell at ${targetPos}`);
+                    if (gameState.playerClasses[p] === 'Vigilante') {
+                        log(`${p} triggers Vengeance is Mine: +7 AP next turn`);
+                    }
+                    return;
+                }
+            }
+
+            for (let p in gameState.guardians) {
+                const targetGuardian = gameState.guardians[p].find(g => g.pos === targetPos && g.alive);
+                if (targetGuardian) {
+                    if (gameState.playerClasses[player] === 'Bounty Hunter') {
+                        gameState.cursed[targetGuardian.id] = true;
+                        log(`${guardian.id} cursed ${targetGuardian.id} with Marked Man`);
+                    } else {
+                        log("Shot ignored—use silver slug to eliminate!");
+                    }
+                    return;
+                }
+            }
+
+            const obstacle = gameState.obstacles.find(o => o.pos === targetPos);
+            if (obstacle) {
+                if (obstacle.type === 'Dynamite') {
+                    handleDynamiteExplosion(targetPos);
+                } else {
+                    gameState.obstacles = gameState.obstacles.filter(o => o.pos !== targetPos);
+                    gameState.obstacleCount--;
+                    log(`${guardian.id} destroyed ${obstacle.type} at ${targetPos}`);
+                }
+            }
+        }
+
+        function handleDynamiteExplosion(pos) {
+            const [col, row] = [pos.charCodeAt(0) - 64, parseInt(pos[1])];
+            const radius = 3;
+            const affected = [];
+            for (let r = Math.max(1, row - 1); r <= Math.min(9, row + 1); r++) {
+                for (let c = Math.max(1, col - 1); c <= Math.min(9, col + 1); c++) {
+                    affected.push(`${String.fromCharCode(64 + c)}${r}`);
+                }
+            }
+
+            gameState.obstacles = gameState.obstacles.filter(o => o.pos !== pos);
+            gameState.obstacleCount--;
+            log(`Dynamite exploded at ${pos}, affecting ${affected.length} squares`);
+
+            for (let p in gameState.bloodwells) {
+                gameState.bloodwells[p] = gameState.bloodwells[p].filter(b => !affected.includes(b));
+                if (gameState.bloodwells[p].length === 0) {
+                    log(`${p} eliminated—no Bloodwells left!`);
+                }
+            }
+        }
+
+        function canThrowObstacle(guardian, targetPos, type) {
+            const [targetCol, targetRow] = [targetPos.charCodeAt(0) - 64, parseInt(targetPos[1])];
+            const [currentCol, currentRow] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
+            const direction = guardian.facing;
+            let path = [];
+            if (direction === 'N' && targetCol === currentCol && targetRow < currentRow) {
+                for (let r = currentRow - 1; r >= targetRow; r--) path.push(`${String.fromCharCode(64 + currentCol)}${r}`);
+            } else if (direction === 'S' && targetCol === currentCol && targetRow > currentRow) {
+                for (let r = currentRow + 1; r <= targetRow; r++) path.push(`${String.fromCharCode(64 + currentCol)}${r}`);
+            } else if (direction === 'E' && targetRow === currentRow && targetCol > currentCol) {
+                for (let c = currentCol + 1; c <= targetCol; c++) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
+            } else if (direction === 'W' && targetRow === currentRow && targetCol < currentCol) {
+                for (let c = currentCol - 1; c >= targetCol; c++) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
+            } else {
+                log("Invalid throw direction!");
+                return false;
+            }
+
+            if (path.length > 3) {
+                log("Throw distance exceeds 3 squares!");
+                return false;
+            }
+
+            for (let pos of path.slice(0, -1)) {
+                if (gameState.obstacles.some(o => o.pos === pos) || Object.values(gameState.guardians).flat().some(g => g.pos === pos && g.alive)) {
+                    log("Throw path blocked!");
+                    return false;
+                }
+            }
+
+            const targetOccupied = Object.values(gameState.guardians).flat().some(g => g.pos === targetPos && g.alive) || gameState.obstacles.some(o => o.pos === targetPos);
+            if (type === 'Grave Dust' && targetOccupied) {
+                const targetGuardian = Object.values(gameState.guardians).flat().find(g => g.pos === targetPos && g.alive);
+                if (targetGuardian) {
+                    gameState.cursed[targetGuardian.id] = true;
+                    log(`${guardian.id} cursed ${targetGuardian.id} with Grave Dust`);
+                    return false;
+                }
+            } else if (targetOccupied) {
+                log("Target square occupied!");
+                return false;
+            }
+
+            return true;
+        }
+
+        function handleHandCannon(guardian, targetPos) {
+            const [targetCol, targetRow] = [targetPos.charCodeAt(0) - 64, parseInt(targetPos[1])];
+            const [currentCol, currentRow] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
+            const direction = guardian.facing;
+            let path = [];
+            if (direction === 'N' && targetCol === currentCol && targetRow < currentRow) {
+                for (let r = currentRow - 1; r >= Math.max(1, currentRow - 5); r--) path.push(`${String.fromCharCode(64 + currentCol)}${r}`);
+            } else if (direction === 'S' && targetCol === currentCol && targetRow > currentRow) {
+                for (let r = currentRow + 1; r <= Math.min(9, currentRow + 5); r++) path.push(`${String.fromCharCode(64 + currentCol)}${r}`);
+            } else if (direction === 'E' && targetRow === currentRow && targetCol > currentCol) {
+                for (let c = currentCol + 1; c <= Math.min(9, currentCol + 5); c++) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
+            } else if (direction === 'W' && targetRow === currentRow && targetCol < currentCol) {
+                for (let c = currentCol - 1; c >= Math.max(1, currentCol - 5); c--) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
+            } else {
+                log("Invalid Hand Cannon direction!");
+                return;
+            }
+
+            for (let pos of path) {
+                for (let p in gameState.bloodwells) {
+                    if (gameState.bloodwells[p].includes(pos)) {
+                        gameState.bloodwells[p] = gameState.bloodwells[p].filter(b => b !== pos);
+                        log(`${guardian.id} Hand Cannon hit ${p}'s Bloodwell at ${pos}`);
+                    }
+                }
+                const obstacle = gameState.obstacles.find(o => o.pos === pos);
+                if (obstacle) {
+                    if (obstacle.type === 'Dynamite') {
+                        handleDynamiteExplosion(pos);
+                    } else {
+                        gameState.obstacles = gameState.obstacles.filter(o => o.pos !== pos);
+                        gameState.obstacleCount--;
+                        log(`${guardian.id} Hand Cannon destroyed ${obstacle.type} at ${pos}`);
+                    }
+                }
+            }
+        }
+
+        function handleRampage(guardian) {
+            const [col, row] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
+            const direction = guardian.facing;
+            let leftPos, rightPos;
+            if (direction === 'N' || direction === 'S') {
+                leftPos = col > 1 ? `${String.fromCharCode(64 + col - 1)}${row}` : null;
+                rightPos = col < 9 ? `${String.fromCharCode(64 + col + 1)}${row}` : null;
+            } else {
+                leftPos = row > 1 ? `${String.fromCharCode(64 + col)}${row - 1}` : null;
+                rightPos = row < 9 ? `${String.fromCharCode(64 + col)}${row + 1}` : null;
+            }
+
+            [leftPos, rightPos].forEach(pos => {
+                if (pos) {
+                    for (let p in gameState.bloodwells) {
+                        if (gameState.bloodwells[p].includes(pos)) {
+                            gameState.bloodwells[p] = gameState.bloodwells[p].filter(b => b !== pos);
+                            log(`${guardian.id} Rampage hit ${p}'s Bloodwell at ${pos}`);
+                        }
+                    }
+                    const obstacle = gameState.obstacles.find(o => o.pos === pos);
+                    if (obstacle) {
+                        if (obstacle.type === 'Dynamite') {
+                            handleDynamiteExplosion(pos);
+                        } else {
+                            gameState.obstacles = gameState.obstacles.filter(o => o.pos !== pos);
+                            gameState.obstacleCount--;
+                            log(`${guardian.id} Rampage destroyed ${obstacle.type} at ${pos}`);
+                        }
+                    }
+                }
+            });
+        }
+
+        function endTurn() {
+            gameState.currentPlayer = (gameState.currentPlayer + 1) % gameState.playerCount;
+            gameState.turn++;
+            gameState.ap = apPerTurn[gameState.currentPlayer + 1];
+            gameState.selectedGuardian = null;
+            gameState.selectedAction = null;
+            log(`Turn ended. Now ${players[gameState.currentPlayer]}'s turn.`);
+            renderGrid();
+            updateGameInfo();
+        }
+
+        function updateGameInfo() {
+            document.getElementById('current-player').textContent = players[gameState.currentPlayer];
+            document.getElementById('ap-left').textContent = gameState.ap;
+            document.getElementById('turn').textContent = gameState.turn;
+            document.getElementById('obstacle-count').textContent = gameState.obstacleCount;
+        }
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += `<p>${message}</p>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
