@@ -11,6 +11,16 @@
             color: #fff;
             text-align: center;
         }
+        #setup-screen, #game-screen {
+            margin: 20px auto;
+            max-width: 800px;
+        }
+        #setup-screen {
+            display: block;
+        }
+        #game-screen {
+            display: none;
+        }
         #grid {
             display: grid;
             grid-template-columns: repeat(9, 50px);
@@ -51,24 +61,54 @@
         }
         button:hover { background-color: #666; }
         #log { height: 200px; overflow-y: scroll; background-color: #222; padding: 10px; }
+        select {
+            padding: 5px;
+            margin: 5px;
+            background-color: #444;
+            color: #fff;
+            border: none;
+        }
+        .class-selection {
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
-    <h1>Dreadwood Playtest</h1>
-    <div id="game-info">
-        <p>Current Player: <span id="current-player">P1</span> | AP Left: <span id="ap-left">4</span> | Turn: <span id="turn">1</span></p>
-        <p>Obstacles: <span id="obstacle-count">0</span>/12 | Dread Fates: <input type="checkbox" id="dread-fates"> Use</p>
+    <div id="setup-screen">
+        <h1>Dreadwood Setup</h1>
+        <div>
+            <label for="player-count">Number of Players:</label>
+            <select id="player-count">
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+            </select>
+        </div>
+        <div id="class-selections"></div>
+        <div>
+            <label for="dread-fates">Use Dread Fates:</label>
+            <input type="checkbox" id="dread-fates">
+        </div>
+        <button onclick="startGame()">Start Game</button>
     </div>
-    <div id="grid"></div>
-    <div id="controls">
-        <button onclick="selectAction('move')">Move</button>
-        <button onclick="selectAction('turn')">Turn</button>
-        <button onclick="selectAction('shoot')">Shoot</button>
-        <button onclick="selectAction('throw')">Throw Obstacle</button>
-        <button onclick="selectAction('ability')">Use Ability</button>
-        <button onclick="endTurn()">End Turn</button>
+
+    <div id="game-screen">
+        <h1>Dreadwood Playtest</h1>
+        <div id="game-info">
+            <p>Current Player: <span id="current-player">P1</span> | AP Left: <span id="ap-left">4</span> | Turn: <span id="turn">1</span></p>
+            <p>Obstacles: <span id="obstacle-count">0</span>/12 | Dread Fates: <span id="dread-fates-status">Off</span></p>
+        </div>
+        <div id="grid"></div>
+        <div id="controls">
+            <button onclick="selectAction('move')">Move</button>
+            <button onclick="selectAction('turn')">Turn</button>
+            <button onclick="selectAction('shoot')">Shoot</button>
+            <button onclick="selectAction('throw')">Throw Obstacle</button>
+            <button onclick="selectAction('ability')">Use Ability</button>
+            <button onclick="endTurn()">End Turn</button>
+        </div>
+        <div id="log"></div>
     </div>
-    <div id="log"></div>
 
     <script>
         const GRID_SIZE = 9;
@@ -168,12 +208,49 @@
             { name: 'Dread’s Edge', effect: '+1 AP on Guardian elimination, once/game (max 6)' }
         ];
 
-        function initGame() {
-            const playerCount = prompt("Enter number of players (2-4):", "2");
-            gameState.playerCount = parseInt(playerCount);
+        function initSetup() {
+            const playerCountSelect = document.getElementById('player-count');
+            playerCountSelect.onchange = updateClassSelections;
+            updateClassSelections();
+        }
+
+        function updateClassSelections() {
+            const playerCount = parseInt(document.getElementById('player-count').value);
+            const classSelectionsDiv = document.getElementById('class-selections');
+            classSelectionsDiv.innerHTML = '';
+
+            for (let i = 1; i <= playerCount; i++) {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'class-selection';
+                playerDiv.innerHTML = `
+                    <label>Player ${i} Class:</label>
+                    <button onclick="selectClass('P${i}', 'Sheriff')">Sheriff</button>
+                    <button onclick="selectClass('P${i}', 'Vigilante')">Vigilante</button>
+                    <button onclick="selectClass('P${i}', 'Outlaw')">Outlaw</button>
+                    <button onclick="selectClass('P${i}', 'Bounty Hunter')">Bounty Hunter</button>
+                    <span id="class-P${i}"></span>
+                `;
+                classSelectionsDiv.appendChild(playerDiv);
+            }
+        }
+
+        function selectClass(player, className) {
+            gameState.playerClasses[player] = className;
+            document.getElementById(`class-${player}`).textContent = className;
+        }
+
+        function startGame() {
+            gameState.playerCount = parseInt(document.getElementById('player-count').value);
             if (gameState.playerCount < 2 || gameState.playerCount > 4) {
                 alert("Invalid player count. Defaulting to 2 players.");
                 gameState.playerCount = 2;
+            }
+
+            for (let i = 1; i <= gameState.playerCount; i++) {
+                if (!gameState.playerClasses[`P${i}`]) {
+                    alert(`Please select a class for Player ${i}!`);
+                    return;
+                }
             }
 
             const layout = layouts[`${gameState.playerCount}P`];
@@ -191,7 +268,6 @@
                     alive: true
                 }));
                 gameState.bloodwells[player] = layout.bloodwells[player];
-                gameState.playerClasses[player] = prompt(`Choose class for ${player} (Sheriff, Vigilante, Outlaw, Bounty Hunter):`, "Sheriff");
                 gameState.cursed[`${player}G1`] = false;
                 gameState.cursed[`${player}G2`] = false;
             }
@@ -211,6 +287,9 @@
                 }
             }
 
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            document.getElementById('dread-fates-status').textContent = gameState.dreadFates ? 'On' : 'Off';
             renderGrid();
             updateGameInfo();
         }
@@ -401,7 +480,7 @@
             } else if (direction === 'E' && targetRow === currentRow && targetCol > currentCol) {
                 for (let c = currentCol + 1; c <= targetCol; c++) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
             } else if (direction === 'W' && targetRow === currentRow && targetCol < currentCol) {
-                for (let c = currentCol - 1; c >= targetCol; c--) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
+                for (let c = currentCol - 1; c >= targetCol; c++) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
             } else {
                 log("Invalid shot direction!");
                 return null;
@@ -540,7 +619,7 @@
             } else if (direction === 'E' && targetRow === currentRow && targetCol > currentCol) {
                 for (let c = currentCol + 1; c <= Math.min(9, currentCol + 5); c++) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
             } else if (direction === 'W' && targetRow === currentRow && targetCol < currentCol) {
-                for (let c = currentCol - 1; c >= Math.max(1, currentCol - 5); c--) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
+                for (let c = currentCol - 1; c >= Math.max(1, currentCol - 5); c++) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
             } else {
                 log("Invalid Hand Cannon direction!");
                 return;
@@ -624,7 +703,7 @@
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        window.onload = initGame;
+        window.onload = initSetup;
     </script>
 </body>
 </html>
