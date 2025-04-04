@@ -5,31 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dreadwood Playtest</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Old+English+Text+MT&display=swap');
         body {
-            font-family: 'Bebas Neue', sans-serif;
-            background: url('https://images.unsplash.com/photo-1507521628349-dee6b57683e4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
-            background-size: cover;
+            background: #333;
             color: #fff;
             text-align: center;
             margin: 0;
             padding: 0;
-            position: relative;
-        }
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: -1;
+            font-family: Arial, sans-serif;
         }
         h1 {
-            font-family: 'Old English Text MT', serif;
-            color: #ff0000;
-            text-shadow: 2px 2px 4px #000;
+            font-size: 24px;
             margin: 20px 0;
         }
         #setup-screen, #game-screen {
@@ -38,10 +23,8 @@
         }
         #setup-screen {
             display: block;
-            background: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
-            padding: 20px;
-            border: 2px solid #8b0000;
-            border-radius: 10px;
+            background: #444;
+            padding: 30px;
         }
         #game-screen {
             display: none;
@@ -51,18 +34,37 @@
             align-items: flex-start;
         }
         #game-info {
-            background: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
+            background: #444;
             padding: 10px;
-            border: 2px solid #8b0000;
-            border-radius: 5px;
+            border: 1px solid #000;
             margin: 10px 0;
-            font-family: 'Old English Text MT', serif;
             width: 100%;
             box-sizing: border-box;
         }
-        #game-info span {
-            font-family: 'Bebas Neue', sans-serif;
-            color: #ff0000;
+        #actions, #special-actions {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 10px 0;
+            width: 100%;
+        }
+        .action-icon {
+            margin: 5px;
+            padding: 5px;
+            background: #666;
+            border: 1px solid #000;
+            font-size: 30px;
+            cursor: pointer;
+        }
+        .action-icon.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .action-separator {
+            color: #fff;
+            margin: 0 5px;
+            font-size: 30px;
         }
         #grid-container {
             position: relative;
@@ -70,38 +72,20 @@
         }
         #grid {
             display: grid;
-            gap: 1px;
-            background: url('https://www.transparenttextures.com/patterns/cracked-soil.png');
+            background: #555;
             padding: 5px;
-            border: 2px solid #333;
+            border: 1px solid #000;
         }
         .cell {
             background: rgba(85, 85, 85, 0.8);
-            border: 1px solid #000;
+            border: 0.5px solid #000;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 16px;
             cursor: pointer;
             position: relative;
-        }
-        .cell::before {
-            content: attr(data-coord);
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 10px;
-            color: #fff;
-        }
-        .cell::after {
-            content: attr(data-row);
-            position: absolute;
-            left: -20px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 10px;
-            color: #fff;
+            box-sizing: border-box;
         }
         .guardian { font-size: 16px; }
         .guardian.sheriff { background: #fff; }
@@ -117,8 +101,8 @@
         .cursed { border: 2px solid #800080; }
         .shared .obstacle {
             position: absolute;
-            bottom: 5px;
-            right: 5px;
+            bottom: 2px;
+            right: 2px;
             font-size: 12px;
         }
         .selected { box-shadow: 0 0 5px 2px #ffff00; }
@@ -131,40 +115,20 @@
         .arrow:hover {
             background: rgba(255, 255, 255, 0.8);
         }
-        #actions {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 10px;
-        }
-        .action-icon {
-            margin: 5px;
-            padding: 5px;
-            background: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
-            border: 2px solid #8b0000;
-            border-radius: 5px;
-            font-size: 30px;
-            cursor: pointer;
-        }
-        .action-icon:hover {
-            box-shadow: 0 0 5px 2px #ff0000;
-        }
         #class-info {
-            background: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
+            background: #444;
             padding: 10px;
-            border: 2px solid #8b0000;
-            border-radius: 5px;
+            border: 1px solid #000;
             margin: 10px;
             text-align: left;
             max-width: 300px;
         }
         #class-info h3 {
-            font-family: 'Old English Text MT', serif;
             margin: 0;
+            font-size: 18px;
         }
         #class-info p, #class-info ul {
-            font-family: 'Bebas Neue', sans-serif;
-            color: #fff;
+            color: #000;
             font-size: 14px;
             margin: 5px 0;
         }
@@ -176,7 +140,7 @@
             margin: 5px 0;
         }
         #class-info strong {
-            color: #ff0000;
+            color: #000;
         }
         #class-info .used {
             color: #888;
@@ -197,43 +161,40 @@
         }
         button {
             margin: 5px;
-            padding: 5px 10px;
-            background: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
-            color: #ff0000;
-            border: none;
+            padding: 10px 20px;
+            background: #666;
+            color: #fff;
+            border: 1px solid #000;
             border-radius: 5px;
             cursor: pointer;
-            font-family: 'Bebas Neue', sans-serif;
+            font-size: 18px;
             text-transform: uppercase;
-        }
-        button:hover {
-            box-shadow: 0 0 5px 2px #ff0000;
         }
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        select, input[type="checkbox"], input[type="text"] {
+        select, input[type="text"] {
             padding: 5px;
             margin: 5px;
-            background: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
-            color: #ff0000;
-            border: 1px solid #8b0000;
+            background: #444;
+            color: #fff;
+            border: 1px solid #000;
             border-radius: 5px;
-            font-family: 'Bebas Neue', sans-serif;
+            font-size: 16px;
         }
         .class-selection {
-            margin: 10px 0;
+            margin: 20px 0;
         }
         .class-selection button {
             margin: 2px;
-            padding: 5px;
-            font-size: 14px;
-            border: none;
+            padding: 8px 12px;
+            font-size: 16px;
+            border: 1px solid #000;
             border-radius: 5px;
             cursor: pointer;
         }
-        .class-selection button.sheriff { background: #fff; color: #000; }
+        .class-selection button.sheriff { background: #fff; color: #fff; }
         .class-selection button.vigilante { background: #00f; color: #fff; }
         .class-selection button.outlaw { background: #f00; color: #fff; }
         .class-selection button.bounty-hunter { background: #0f0; color: #fff; }
@@ -242,39 +203,40 @@
             box-shadow: 0 0 5px 2px #8b0000;
         }
         .class-info {
-            background: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
             padding: 10px;
-            border: 2px solid #8b0000;
-            border-radius: 5px;
-            margin: 10px 0;
+            margin: 20px 0;
             text-align: left;
         }
         .class-name {
-            font-family: 'Old English Text MT', serif;
+            font-size: 18px;
             margin: 0;
         }
-        .class-name.sheriff { color: #fff; }
-        .class-name.vigilante { color: #00f; }
-        .class-name.outlaw { color: #f00; }
-        .class-name.bounty-hunter { color: #0f0; }
         .class-description {
-            font-family: 'Bebas Neue', sans-serif;
-            color: #fff;
             font-size: 14px;
             margin: 5px 0;
         }
         .class-abilities {
             list-style: none;
             padding: 0;
-            color: #fff;
-            font-family: 'Bebas Neue', sans-serif;
             font-size: 14px;
         }
         .class-abilities li {
             margin: 5px 0;
         }
         .class-abilities strong {
-            color: #ff0000;
+            color: #000;
+        }
+        .player-count-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        label {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: block;
         }
         #elimination-message, #victory-message {
             display: none;
@@ -282,13 +244,10 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
+            background: #444;
             padding: 20px;
-            border: 2px solid #8b0000;
+            border: 1px solid #000;
             border-radius: 10px;
-            font-family: 'Old English Text MT', serif;
-            color: #ff0000;
-            text-shadow: 2px 2px 4px #000;
             font-size: 24px;
             z-index: 1000;
             text-align: center;
@@ -316,6 +275,7 @@
                 font-size: 12px;
             }
             button { font-size: 14px; width: 100%; }
+            select, input[type="text"] { width: 100%; }
         }
         @media (min-width: 600px) and (max-width: 1200px) {
             #grid {
@@ -351,52 +311,25 @@
                 font-size: 14px;
             }
             button { font-size: 16px; }
+            input[type="text"] { width: 200px; }
         }
     </style>
 </head>
 <body>
     <div id="setup-screen">
         <h1>Dreadwood Setup</h1>
-        <div>
-            <label for="player-count">Number of Players:</label>
-            <select id="player-count">
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-            </select>
-        </div>
-        <div id="class-selections"></div>
-        <div>
-            <label for="layout-select">Choose Layout:</label>
-            <select id="layout-select">
-                <!-- Options will be populated dynamically -->
-            </select>
-        </div>
-        <div>
-            <label for="dread-fates">Use Dread Fates:</label>
-            <input type="checkbox" id="dread-fates">
-        </div>
-        <button onclick="startGame()">Start Game</button>
+        <div id="setup-content"></div>
     </div>
 
     <div id="game-screen">
-        <div id="actions">
-            <div class="action-icon" onclick="selectAction('shoot')">🔫</div>
-            <div class="action-icon" onclick="selectThrow('Tombstone')">🪦</div>
-            <div class="action-icon" onclick="selectThrow('Carcass')">💀</div>
-            <div class="action-icon" onclick="selectThrow('Grave Dust')">💩</div>
-            <div class="action-icon" onclick="selectThrow('Dynamite')">💥</div>
-            <div class="action-icon special-action" id="shoot-grave-dust" style="display: none;" onclick="selectAction('shootGraveDust')">🔫⬇️</div>
-            <div class="action-icon special-action" id="bite-fuse" style="display: none;" onclick="selectAction('bite')">🍽️💥🤢</div>
-            <div class="action-icon" onclick="selectAction('ability')">⚡</div>
-        </div>
+        <div id="actions"></div>
+        <div id="special-actions"></div>
         <div id="grid-container">
             <div id="grid"></div>
         </div>
         <div id="class-info"></div>
         <div id="game-info">
-            <p>Current Player: <span id="current-player">P1</span> | AP Left: <span id="ap-left">4</span> | Turn: <span id="turn">1</span></p>
-            <p>Obstacles: <span id="obstacle-count">0</span>/12 | Dread Fates: <span id="dread-fates-status">Off</span></p>
+            <p>Current Player: <span id="current-player">P1</span> | AP Left: <span id="ap-left">4</span> | Turn: <span id="turn">1</span> | Obstacles: <span id="obstacle-count">0</span>/12</p>
         </div>
         <div id="controls">
             <button id="undo-button" onclick="undoTurn()" disabled>Undo</button>
@@ -413,23 +346,23 @@
         const colors = { 'P1': 'white', 'P2': 'blue', 'P3': 'red', 'P4': 'green' };
         const apPerTurn = { 1: 4, 2: 5, 3: 6, 4: 8 };
         let gameState = {
+            setupStep: 1,
             currentPlayer: 0,
             turn: 1,
             ap: apPerTurn[1],
-            playerCount: 2,
+            playerCount: 0,
             guardians: {},
             bloodwells: {},
             obstacles: [],
             obstacleCount: 0,
             selectedGuardian: null,
             selectedAction: null,
-            dreadFates: false,
             playerClasses: {},
-            playerFates: {},
+            playerNames: {},
+            silverSlugs: {},
             cursed: {},
             usedAbilities: {},
             layout: null,
-            playerNames: {},
             turnHistory: [],
             actionsThisTurn: []
         };
@@ -538,74 +471,62 @@
             ]
         };
 
-        const dreadFates = [
-            { name: 'Bloodlust', effect: '+1 AP on well shot, once/turn (max 6)' },
-            { name: 'Grave Whisper', effect: 'Throw Grave Dust 0 AP, once/turn' },
-            { name: 'Dust Runner', effect: 'Move through Carcass without stopping' },
-            { name: 'Iron Will', effect: 'Immune to curses' },
-            { name: 'Stake Driver', effect: 'Shoot obstacle 2 AP (normally 3)' },
-            { name: 'Night Stalker', effect: '+1 space to first move/turn (max 5)' },
-            { name: 'Wanted Poster', effect: 'Start with 2 silver slugs' },
-            { name: 'Crypt Keeper', effect: 'First Tombstone immovable' },
-            { name: 'Quick Draw', effect: 'First shot/turn 2 AP (normally 3)' },
-            { name: 'Vampire’s Gambit', effect: 'Blood Ritual 2 AP (normally 3)' },
-            { name: 'Shadow Veil', effect: 'Silver slugs on you cost 4 AP (normally 3)' },
-            { name: 'Dread’s Edge', effect: '+1 AP on Guardian elimination, once/game (max 6)' }
-        ];
+        function renderSetupScreen() {
+            const setupContent = document.getElementById('setup-content');
+            setupContent.innerHTML = '';
 
-        function initSetup() {
-            const playerCountSelect = document.getElementById('player-count');
-            playerCountSelect.onchange = updateClassSelections;
-            updateClassSelections();
-            populateLayoutSelect();
-        }
-
-        function updateClassSelections() {
-            const playerCount = parseInt(document.getElementById('player-count').value);
-            const classSelectionsDiv = document.getElementById('class-selections');
-            classSelectionsDiv.innerHTML = '';
-
-            for (let i = 1; i <= playerCount; i++) {
-                const playerDiv = document.createElement('div');
-                playerDiv.className = 'class-selection';
-                playerDiv.innerHTML = `
-                    <label>Player ${i} Class:</label>
-                    <button class="sheriff" onclick="selectClass('P${i}', 'Sheriff')">⭐ Sheriff</button>
-                    <button class="vigilante" onclick="selectClass('P${i}', 'Vigilante')">⚖️ Vigilante</button>
-                    <button class="outlaw" onclick="selectClass('P${i}', 'Outlaw')">💣 Outlaw</button>
-                    <button class="bounty-hunter" onclick="selectClass('P${i}', 'Bounty Hunter')">💰 Bounty Hunter</button>
+            if (gameState.setupStep === 1) {
+                setupContent.innerHTML = `
+                    <div class="player-count-buttons">
+                        <button onclick="selectPlayerCount(2)">2 Players</button>
+                        <button onclick="selectPlayerCount(3)">3 Players</button>
+                        <button onclick="selectPlayerCount(4)">4 Players</button>
+                    </div>
                 `;
-                const classInfoDiv = document.createElement('div');
-                classInfoDiv.className = 'class-info';
-                classInfoDiv.id = `class-info-P${i}`;
-                classInfoDiv.innerHTML = `<p>Select a class to view details.</p>`;
-                playerDiv.appendChild(classInfoDiv);
-
-                const nameDiv = document.createElement('div');
-                nameDiv.innerHTML = `
-                    <label for="name-P${i}">Player ${i} Name:</label>
-                    <input type="text" id="name-P${i}" placeholder="P${i}" maxlength="20">
+            } else if (gameState.setupStep <= gameState.playerCount + 1) {
+                const playerNum = gameState.setupStep - 1;
+                const player = `P${playerNum}`;
+                setupContent.innerHTML = `
+                    <h1>Player ${playerNum} Setup</h1>
+                    <div class="class-selection">
+                        <label>Player ${playerNum} Class:</label>
+                        <button class="sheriff" onclick="selectClass('${player}', 'Sheriff')">⭐ Sheriff</button>
+                        <button class="vigilante" onclick="selectClass('${player}', 'Vigilante')">⚖️ Vigilante</button>
+                        <button class="outlaw" onclick="selectClass('${player}', 'Outlaw')">💣 Outlaw</button>
+                        <button class="bounty-hunter" onclick="selectClass('${player}', 'Bounty Hunter')">💰 Bounty Hunter</button>
+                    </div>
+                    <div class="class-info" id="class-info-${player}">
+                        <p>Select a class to view details.</p>
+                    </div>
+                    <label for="name-${player}">Player ${playerNum} Name:</label>
+                    <input type="text" id="name-${player}" placeholder="${player}" maxlength="20">
+                    <button onclick="backStep()">Back</button>
+                    <button onclick="nextStep()">Next</button>
                 `;
-                playerDiv.appendChild(nameDiv);
-
-                classSelectionsDiv.appendChild(playerDiv);
+                if (gameState.setupStep === gameState.playerCount + 1) {
+                    const nextButton = setupContent.querySelector('button[onclick="nextStep()"]');
+                    nextButton.textContent = 'Start Game';
+                    nextButton.onclick = startGame;
+                }
+                const nameInput = document.getElementById(`name-${player}`);
+                if (gameState.playerNames[player]) {
+                    nameInput.value = gameState.playerNames[player];
+                }
+                if (gameState.playerClasses[player]) {
+                    selectClass(player, gameState.playerClasses[player]);
+                }
             }
         }
 
-        function populateLayoutSelect() {
-            const layoutSelect = document.getElementById('layout-select');
-            layoutSelect.innerHTML = '';
-            for (let i = 1; i <= 26; i++) {
-                const option = document.createElement('option');
-                option.value = i - 1;
-                option.textContent = `Layout ${i}`;
-                layoutSelect.appendChild(option);
-            }
+        function selectPlayerCount(count) {
+            gameState.playerCount = count;
+            gameState.setupStep = 2;
+            renderSetupScreen();
         }
 
         function selectClass(player, className) {
             gameState.playerClasses[player] = className;
-            const buttons = document.querySelectorAll(`#class-selections button[onclick*="selectClass('${player}'"]`);
+            const buttons = document.querySelectorAll(`button[onclick*="selectClass('${player}'"]`);
             buttons.forEach(button => {
                 if (button.textContent.includes(className)) {
                     button.classList.add('selected');
@@ -615,9 +536,9 @@
             });
 
             const classInfoDiv = document.getElementById(`class-info-${player}`);
-            const info = classInfo[player];
+            const info = classInfo[className];
             classInfoDiv.innerHTML = `
-                <h3 class="class-name ${className.toLowerCase()}">${className}</h3>
+                <h3 class="class-name">${className}</h3>
                 <p class="class-description">${info.description}</p>
                 <ul class="class-abilities">
                     ${info.abilities.map(ability => `
@@ -627,23 +548,37 @@
             `;
         }
 
+        function nextStep() {
+            const playerNum = gameState.setupStep - 1;
+            const player = `P${playerNum}`;
+            if (!gameState.playerClasses[player]) {
+                alert(`Please select a class for Player ${playerNum}!`);
+                return;
+            }
+            const nameInput = document.getElementById(`name-${player}`).value.trim();
+            gameState.playerNames[player] = nameInput || player;
+
+            gameState.setupStep++;
+            renderSetupScreen();
+        }
+
+        function backStep() {
+            gameState.setupStep--;
+            if (gameState.setupStep < 1) gameState.setupStep = 1;
+            renderSetupScreen();
+        }
+
         function startGame() {
-            gameState.playerCount = parseInt(document.getElementById('player-count').value);
-            if (gameState.playerCount < 2 || gameState.playerCount > 4) {
-                alert("Invalid player count. Defaulting to 2 players.");
-                gameState.playerCount = 2;
+            const playerNum = gameState.setupStep - 1;
+            const player = `P${playerNum}`;
+            if (!gameState.playerClasses[player]) {
+                alert(`Please select a class for Player ${playerNum}!`);
+                return;
             }
+            const nameInput = document.getElementById(`name-${player}`).value.trim();
+            gameState.playerNames[player] = nameInput || player;
 
-            for (let i = 1; i <= gameState.playerCount; i++) {
-                if (!gameState.playerClasses[`P${i}`]) {
-                    alert(`Please select a class for Player ${i}!`);
-                    return;
-                }
-                const nameInput = document.getElementById(`name-P${i}`).value.trim();
-                gameState.playerNames[`P${i}`] = nameInput || `P${i}`;
-            }
-
-            const layoutIndex = parseInt(document.getElementById('layout-select').value);
+            const layoutIndex = Math.floor(Math.random() * 26);
             const layout = layouts[`${gameState.playerCount}P`][layoutIndex];
             gameState.layout = layout;
             gameState.guardians = {};
@@ -652,17 +587,18 @@
             gameState.obstacleCount = layout.obstacles.length;
 
             for (let i = 1; i <= gameState.playerCount; i++) {
-                const player = `P${i}`;
-                gameState.guardians[player] = layout.guardians[player].map((g, idx) => ({
-                    id: `${player}G${idx + 1}`,
+                const p = `P${i}`;
+                gameState.guardians[p] = layout.guardians[p].map((g, idx) => ({
+                    id: `${p}G${idx + 1}`,
                     pos: g.pos,
                     facing: g.facing,
                     alive: true
                 }));
-                gameState.bloodwells[player] = layout.bloodwells[player];
-                gameState.cursed[`${player}G1`] = false;
-                gameState.cursed[`${player}G2`] = false;
-                gameState.usedAbilities[player] = {};
+                gameState.bloodwells[p] = layout.bloodwells[p];
+                gameState.silverSlugs[p] = 1;
+                gameState.cursed[`${p}G1`] = false;
+                gameState.cursed[`${p}G2`] = false;
+                gameState.usedAbilities[p] = {};
             }
 
             if (gameState.playerCount === 4) {
@@ -671,21 +607,12 @@
                 gameState.obstacleCount++;
             }
 
-            gameState.dreadFates = document.getElementById('dread-fates').checked;
-            if (gameState.dreadFates) {
-                const shuffledFates = dreadFates.sort(() => Math.random() - 0.5);
-                for (let i = 1; i <= gameState.playerCount; i++) {
-                    gameState.playerFates[`P${i}`] = shuffledFates[i - 1];
-                    alert(`${gameState.playerNames[`P${i}`]} drew Dread Fate: ${gameState.playerFates[`P${i}`].name} - ${gameState.playerFates[`P${i}`].effect}`);
-                }
-            }
-
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
-            document.getElementById('dread-fates-status').textContent = gameState.dreadFates ? 'On' : 'Off';
             renderGrid();
             updateGameInfo();
             updateClassInfo();
+            updateActionIcons();
         }
 
         function renderGrid() {
@@ -697,8 +624,6 @@
                     const cell = document.createElement('div');
                     cell.className = 'cell';
                     cell.id = pos;
-                    cell.setAttribute('data-coord', String.fromCharCode(64 + col));
-                    cell.setAttribute('data-row', row);
                     cell.onclick = () => selectCell(pos);
 
                     let content = '';
@@ -776,14 +701,62 @@
                         }
                     }
                 });
-
-                const currentPos = gameState.selectedGuardian.pos;
-                const obstacle = gameState.obstacles.find(o => o.pos === currentPos);
-                const shootGraveDust = document.getElementById('shoot-grave-dust');
-                const biteFuse = document.getElementById('bite-fuse');
-                shootGraveDust.style.display = obstacle && obstacle.type === 'Grave Dust' ? 'block' : 'none';
-                biteFuse.style.display = obstacle && obstacle.type === 'Dynamite' ? 'block' : 'none';
             }
+        }
+
+        function updateActionIcons() {
+            const actionsDiv = document.getElementById('actions');
+            const specialActionsDiv = document.getElementById('special-actions');
+            actionsDiv.innerHTML = `
+                <div class="action-icon" onclick="selectAction('shoot')">🔫</div>
+                <span class="action-separator">|</span>
+                <div class="action-icon" onclick="selectThrow('Tombstone')">🪦</div>
+                <span class="action-separator">|</span>
+                <div class="action-icon" onclick="selectThrow('Carcass')">💀</div>
+                <span class="action-separator">|</span>
+                <div class="action-icon" onclick="selectThrow('Grave Dust')">💩</div>
+                <span class="action-separator">|</span>
+                <div class="action-icon" onclick="selectThrow('Dynamite')">💥</div>
+            `;
+
+            let specialActions = [];
+            if (gameState.selectedGuardian) {
+                const pos = gameState.selectedGuardian.pos;
+                const obstacle = gameState.obstacles.find(o => o.pos === pos);
+                if (obstacle && obstacle.type === 'Dynamite') {
+                    specialActions.push(`<div class="action-icon" onclick="selectAction('bite')">🍽️💥🤢</div>`);
+                }
+                if (obstacle && obstacle.type === 'Grave Dust') {
+                    specialActions.push(`<div class="action-icon" onclick="selectAction('dispel')">🪄</div>`);
+                }
+            }
+
+            const player = players[gameState.currentPlayer];
+            if (!gameState.usedAbilities[player]?.['Blood Ritual']) {
+                specialActions.push(`<div class="action-icon" onclick="selectAction('bloodRitual')">🩸🪄</div>`);
+            }
+
+            const className = gameState.playerClasses[player];
+            if (className === 'Sheriff' && !gameState.usedAbilities[player]?.['Order Restored']) {
+                specialActions.push(`<div class="action-icon" onclick="selectAbility('Order Restored')">⭐➕</div>`);
+            } else if (className === 'Vigilante' && !gameState.usedAbilities[player]?.['Vengeance is Mine']) {
+                specialActions.push(`<div class="action-icon" onclick="selectAbility('Vengeance is Mine')">⚖️😏</div>`);
+            } else if (className === 'Outlaw') {
+                if (!gameState.usedAbilities[player]?.['Hand Cannon']) {
+                    specialActions.push(`<div class="action-icon" onclick="selectAbility('Hand Cannon')">🚀</div>`);
+                }
+                if (!gameState.usedAbilities[player]?.['Rampage']) {
+                    specialActions.push(`<div class="action-icon" onclick="selectAbility('Rampage')"><span style="color: #ff4500;">⏪</span>😡<span style="color: #ff4500;">⏩</span></div>`);
+                }
+            } else if (className === 'Bounty Hunter' && !gameState.usedAbilities[player]?.['Contract Payoff']) {
+                specialActions.push(`<div class="action-icon" onclick="selectAbility('Contract Payoff')">📜💰</div>`);
+            }
+
+            if (gameState.silverSlugs[player] > 0) {
+                specialActions.push(`<div class="action-icon" onclick="selectAction('silverSlug')">🔫💎</div>`);
+            }
+
+            specialActionsDiv.innerHTML = specialActions.join('<span class="action-separator">|</span>');
         }
 
         function selectCell(pos) {
@@ -794,6 +767,7 @@
                 gameState.selectedAction = null;
                 renderGrid();
                 updateClassInfo();
+                updateActionIcons();
             } else if (gameState.selectedGuardian && gameState.selectedAction) {
                 executeAction(pos);
             }
@@ -802,12 +776,22 @@
         function selectAction(action) {
             gameState.selectedAction = action;
             renderGrid();
+            updateActionIcons();
         }
 
         function selectThrow(obstacle) {
             gameState.selectedAction = 'throw';
             gameState.selectedObstacle = obstacle;
             renderGrid();
+        }
+
+        function selectAbility(abilityName) {
+            const player = players[gameState.currentPlayer];
+            if (confirm(`${abilityName} can only be used once per game. Are you sure?`)) {
+                gameState.selectedAction = 'ability';
+                gameState.selectedAbility = abilityName;
+                renderGrid();
+            }
         }
 
         function handleArrowClick(direction) {
@@ -846,7 +830,8 @@
                 obstacleCount: gameState.obstacleCount,
                 cursed: gameState.cursed,
                 usedAbilities: gameState.usedAbilities,
-                ap: gameState.ap
+                ap: gameState.ap,
+                silverSlugs: gameState.silverSlugs
             }));
             gameState.actionsThisTurn.push(currentState);
 
@@ -890,7 +875,7 @@
                 } else if (gameState.obstacleCount >= 12) {
                     alert("Obstacle limit (12) reached!");
                 }
-            } else if (action === 'shootGraveDust') {
+            } else if (action === 'dispel') {
                 apCost = 3;
                 if (gameState.ap >= apCost) {
                     const pos = guardian.pos;
@@ -899,7 +884,7 @@
                         gameState.obstacles = gameState.obstacles.filter(o => o !== obstacle);
                         gameState.obstacleCount--;
                         gameState.ap -= apCost;
-                        alert(`${gameState.playerNames[player]}'s ${guardian.id} shot the Grave Dust at ${pos}`);
+                        alert(`${gameState.playerNames[player]}'s ${guardian.id} dispelled the Grave Dust at ${pos}`);
                     }
                 }
             } else if (action === 'bite') {
@@ -915,9 +900,50 @@
                         alert(`${gameState.playerNames[player]}'s ${guardian.id} bit the fuse at ${pos} and is now cursed!`);
                     }
                 }
+            } else if (action === 'bloodRitual') {
+                apCost = 3;
+                if (gameState.ap >= apCost) {
+                    const target = canShoot(guardian, targetPos);
+                    if (target && gameState.bloodwells[player].includes(targetPos)) {
+                        gameState.bloodwells[player] = gameState.bloodwells[player].filter(pos => pos !== targetPos);
+                        const deadGuardian = gameState.guardians[player].find(g => !g.alive);
+                        if (deadGuardian) {
+                            deadGuardian.alive = true;
+                            deadGuardian.pos = targetPos;
+                            gameState.ap -= apCost;
+                            gameState.usedAbilities[player]['Blood Ritual'] = true;
+                            alert(`${gameState.playerNames[player]} used Blood Ritual: Sacrificed a Bloodwell at ${targetPos} to revive ${deadGuardian.id}`);
+                        } else {
+                            alert("No dead Guardians to revive!");
+                            gameState.actionsThisTurn.pop();
+                            return;
+                        }
+                    } else {
+                        alert("Blood Ritual requires shooting your own Bloodwell!");
+                        gameState.actionsThisTurn.pop();
+                        return;
+                    }
+                }
+            } else if (action === 'silverSlug') {
+                apCost = 3;
+                if (gameState.ap >= apCost && gameState.silverSlugs[player] > 0) {
+                    const target = canShoot(guardian, targetPos);
+                    if (target) {
+                        for (let p in gameState.guardians) {
+                            const targetGuardian = gameState.guardians[p].find(g => g.pos === targetPos && g.alive);
+                            if (targetGuardian && p !== player) {
+                                targetGuardian.alive = false;
+                                gameState.silverSlugs[player]--;
+                                gameState.ap -= apCost;
+                                alert(`${gameState.playerNames[player]}'s ${guardian.id} used a Silver Slug to eliminate ${gameState.playerNames[p]}'s ${targetGuardian.id} at ${targetPos}`);
+                                break;
+                            }
+                        }
+                    }
+                }
             } else if (action === 'ability') {
-                const ability = gameState.playerClasses[player];
-                if (ability === 'Sheriff') {
+                const ability = gameState.selectedAbility;
+                if (ability === 'Order Restored') {
                     apCost = 3;
                     if (gameState.ap >= apCost) {
                         const deadGuardian = gameState.guardians[player].find(g => !g.alive);
@@ -933,30 +959,32 @@
                             return;
                         }
                     }
-                } else if (ability === 'Vigilante') {
+                } else if (ability === 'Vengeance is Mine') {
                     alert("Vengeance is Mine triggers on opponent shot!");
                     gameState.actionsThisTurn.pop();
                     return;
-                } else if (ability === 'Outlaw') {
-                    const subAction = targetPos === 'Hand Cannon' ? 'Hand Cannon' : 'Rampage';
-                    apCost = subAction === 'Hand Cannon' ? 5 : 2;
+                } else if (ability === 'Hand Cannon') {
+                    apCost = 5;
                     if (gameState.ap >= apCost) {
-                        if (subAction === 'Hand Cannon') {
-                            const direction = prompt("Choose direction for Hand Cannon (N, S, E, W):", guardian.facing);
-                            if (['N', 'S', 'E', 'W'].includes(direction)) {
-                                handleHandCannon(guardian, direction);
-                            } else {
-                                alert("Invalid direction!");
-                                gameState.actionsThisTurn.pop();
-                                return;
-                            }
+                        const direction = prompt("Choose direction for Hand Cannon (N, S, E, W):", guardian.facing);
+                        if (['N', 'S', 'E', 'W'].includes(direction)) {
+                            handleHandCannon(guardian, direction);
+                            gameState.ap -= apCost;
+                            gameState.usedAbilities[player]['Hand Cannon'] = true;
                         } else {
-                            handleRampage(guardian);
+                            alert("Invalid direction!");
+                            gameState.actionsThisTurn.pop();
+                            return;
                         }
-                        gameState.ap -= apCost;
-                        gameState.usedAbilities[player][subAction] = true;
                     }
-                } else if (ability === 'Bounty Hunter') {
+                } else if (ability === 'Rampage') {
+                    apCost = 2;
+                    if (gameState.ap >= apCost) {
+                        handleRampage(guardian);
+                        gameState.ap -= apCost;
+                        gameState.usedAbilities[player]['Rampage'] = true;
+                    }
+                } else if (ability === 'Contract Payoff') {
                     apCost = 3;
                     if (gameState.ap >= apCost) {
                         const target = canShoot(guardian, targetPos);
@@ -979,6 +1007,7 @@
             renderGrid();
             updateGameInfo();
             updateClassInfo();
+            updateActionIcons();
             checkGameState();
             document.getElementById('undo-button').disabled = gameState.actionsThisTurn.length === 0;
         }
@@ -1170,7 +1199,7 @@
             } else if (direction === 'E') {
                 for (let c = currentCol + 1; c <= Math.min(9, currentCol + 5); c++) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
             } else if (direction === 'W') {
-                for (let c = currentCol - 1; c >= Math.max(1, currentCol - 5); c--) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
+                for (let c = currentCol - 1; c >= Math.max(1, currentCol - 5); c++) path.push(`${String.fromCharCode(64 + c)}${currentRow}`);
             }
 
             for (let pos of path) {
@@ -1274,6 +1303,7 @@
             renderGrid();
             updateGameInfo();
             updateClassInfo();
+            updateActionIcons();
         }
 
         function undoTurn() {
@@ -1286,11 +1316,13 @@
             gameState.cursed = JSON.parse(JSON.stringify(lastState.cursed));
             gameState.usedAbilities = JSON.parse(JSON.stringify(lastState.usedAbilities));
             gameState.ap = lastState.ap;
+            gameState.silverSlugs = JSON.parse(JSON.stringify(lastState.silverSlugs));
             gameState.selectedGuardian = null;
             gameState.selectedAction = null;
             renderGrid();
             updateGameInfo();
             updateClassInfo();
+            updateActionIcons();
             document.getElementById('undo-button').disabled = gameState.actionsThisTurn.length === 0;
         }
 
@@ -1307,7 +1339,7 @@
             const info = classInfo[className];
             const classInfoDiv = document.getElementById('class-info');
             classInfoDiv.innerHTML = `
-                <h3 class="class-name ${className.toLowerCase()}">${className}</h3>
+                <h3 class="class-name">${className}</h3>
                 <p class="class-description">${info.description}</p>
                 <ul class="class-abilities">
                     ${info.abilities.map(ability => `
@@ -1318,18 +1350,6 @@
                     `).join('')}
                 </ul>
             `;
-        }
-
-        function selectAbility(abilityName) {
-            const player = players[gameState.currentPlayer];
-            if (confirm(`${abilityName} can only be used once per game. Are you sure?`)) {
-                gameState.selectedAction = 'ability';
-                if (abilityName === 'Hand Cannon' || abilityName === 'Rampage') {
-                    executeAction(abilityName);
-                } else {
-                    renderGrid();
-                }
-            }
         }
 
         function showEliminationMessage(player) {
@@ -1363,30 +1383,30 @@
             document.getElementById('game-screen').style.display = 'none';
             document.getElementById('setup-screen').style.display = 'block';
             gameState = {
+                setupStep: 1,
                 currentPlayer: 0,
                 turn: 1,
                 ap: apPerTurn[1],
-                playerCount: 2,
+                playerCount: 0,
                 guardians: {},
                 bloodwells: {},
                 obstacles: [],
                 obstacleCount: 0,
                 selectedGuardian: null,
                 selectedAction: null,
-                dreadFates: false,
                 playerClasses: {},
-                playerFates: {},
+                playerNames: {},
+                silverSlugs: {},
                 cursed: {},
                 usedAbilities: {},
                 layout: null,
-                playerNames: {},
                 turnHistory: [],
                 actionsThisTurn: []
             };
-            initSetup();
+            renderSetupScreen();
         }
 
-        window.onload = initSetup;
+        window.onload = renderSetupScreen;
     </script>
 </body>
 </html>
