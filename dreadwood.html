@@ -28,7 +28,6 @@
         }
         #game-screen {
             display: none;
-            display: flex;
             flex-wrap: wrap;
             justify-content: center;
             align-items: flex-start;
@@ -190,41 +189,42 @@
             margin: 2px;
             padding: 8px 12px;
             font-size: 16px;
-            border: 1px solid #000;
+            border: 2px solid #000;
             border-radius: 5px;
             cursor: pointer;
         }
-        .class-selection button.sheriff { background: #fff; color: #fff; }
-        .class-selection button.vigilante { background: #00f; color: #fff; }
+        .class-selection button.sheriff { background: #00f; color: #fff; }
+        .class-selection button.vigilante { background: #333; color: #fff; }
         .class-selection button.outlaw { background: #f00; color: #fff; }
         .class-selection button.bounty-hunter { background: #0f0; color: #fff; }
         .class-selection button.selected {
-            outline: 2px solid #8b0000;
-            box-shadow: 0 0 5px 2px #8b0000;
+            outline: 2px solid #ffff00;
+            box-shadow: 0 0 5px 2px #ffff00;
         }
         .class-info {
-            padding: 10px;
-            margin: 20px 0;
+            padding: 15px;
+            margin: 30px 0;
             text-align: left;
+            color: #fff;
         }
         .class-name {
             font-size: 18px;
             margin: 0;
         }
         .class-description {
-            font-size: 14px;
+            font-size: 16px;
             margin: 5px 0;
         }
         .class-abilities {
             list-style: none;
             padding: 0;
-            font-size: 14px;
+            font-size: 16px;
         }
         .class-abilities li {
             margin: 5px 0;
         }
         .class-abilities strong {
-            color: #000;
+            color: #fff;
         }
         .player-count-buttons {
             display: flex;
@@ -474,6 +474,8 @@
         function renderSetupScreen() {
             const setupContent = document.getElementById('setup-content');
             setupContent.innerHTML = '';
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'block';
 
             if (gameState.setupStep === 1) {
                 setupContent.innerHTML = `
@@ -989,6 +991,7 @@
                     if (gameState.ap >= apCost) {
                         const target = canShoot(guardian, targetPos);
                         if (target && target.includes('B')) {
+                            gameState.bloodwells[player].includes(targetPos) ? gameState.bloodwells[player] = gameState.bloodwells[player].filter(pos => pos !== targetPos) : null;
                             gameState.ap -= apCost;
                             gameState.usedAbilities[player]['Contract Payoff'] = true;
                             alert(`${gameState.playerNames[player]} used Contract Payoff: Shot ${target}, +${gameState.playerCount === 2 ? 3 : 5} AP next turn`);
