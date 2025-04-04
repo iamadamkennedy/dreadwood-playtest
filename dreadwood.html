@@ -28,9 +28,8 @@
         }
         #game-screen {
             display: none;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: flex-start;
+            flex-direction: column;
+            align-items: center;
         }
         #game-info {
             background: #444;
@@ -38,6 +37,7 @@
             border: 1px solid #000;
             margin: 10px 0;
             width: 100%;
+            max-width: 90%;
             box-sizing: border-box;
         }
         #actions, #special-actions {
@@ -47,6 +47,7 @@
             flex-wrap: wrap;
             margin: 10px 0;
             width: 100%;
+            max-width: 90%;
         }
         .action-icon {
             margin: 5px;
@@ -68,9 +69,10 @@
         #grid-container {
             position: relative;
             margin: 10px;
+            max-width: 90%;
         }
         #grid {
-            display: grid;
+            display: block;
             background: #555;
             padding: 5px;
             border: 1px solid #000;
@@ -86,24 +88,22 @@
             position: relative;
             box-sizing: border-box;
         }
-        .guardian { font-size: 16px; }
-        .guardian.sheriff { background: #fff; }
-        .guardian.vigilante { background: #00f; }
-        .guardian.outlaw { background: #f00; }
-        .guardian.bounty-hunter { background: #0f0; }
+        .vampire { font-size: 16px; }
+        .vampire.sheriff { background: #00f; }
+        .vampire.vigilante { background: #333; }
+        .vampire.outlaw { background: #f00; }
+        .vampire.bounty-hunter { background: #0f0; }
         .bloodwell { background: #000; }
         .bloodwell::before { content: '🩸'; font-size: 16px; }
+        .bloodwell.sheriff { background: #000; color: #00f; }
+        .bloodwell.vigilante { background: #000; color: #333; }
+        .bloodwell.outlaw { background: #000; color: #f00; }
+        .bloodwell.bounty-hunter { background: #000; color: #0f0; }
         .tombstone::before { content: '🪦'; }
         .carcass::before { content: '💀'; }
         .grave-dust::before { content: '💩'; }
         .dynamite::before { content: '💥'; }
         .cursed { border: 2px solid #800080; }
-        .shared .obstacle {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            font-size: 12px;
-        }
         .selected { box-shadow: 0 0 5px 2px #ffff00; }
         .arrow {
             position: absolute;
@@ -115,6 +115,7 @@
             background: rgba(255, 255, 255, 0.8);
         }
         #class-info {
+            display: block;
             background: #444;
             padding: 10px;
             border: 1px solid #000;
@@ -157,6 +158,7 @@
             flex-wrap: wrap;
             margin: 10px 0;
             width: 100%;
+            max-width: 90%;
         }
         button {
             margin: 5px;
@@ -168,6 +170,7 @@
             cursor: pointer;
             font-size: 18px;
             text-transform: uppercase;
+            touch-action: manipulation;
         }
         button:disabled {
             opacity: 0.5;
@@ -226,6 +229,12 @@
         .class-abilities strong {
             color: #fff;
         }
+        .class-abilities h4 {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+            color: #fff;
+        }
         .player-count-buttons {
             display: flex;
             flex-direction: column;
@@ -261,9 +270,8 @@
                 height: 40px;
                 font-size: 14px;
             }
-            .guardian { font-size: 14px; }
+            .vampire { font-size: 14px; }
             .bloodwell::before { font-size: 14px; }
-            .shared .obstacle { font-size: 10px; }
             .arrow { font-size: 14px; }
             .action-icon { font-size: 24px; }
             #class-info {
@@ -286,9 +294,8 @@
                 height: 45px;
                 font-size: 15px;
             }
-            .guardian { font-size: 15px; }
+            .vampire { font-size: 15px; }
             .bloodwell::before { font-size: 15px; }
-            .shared .obstacle { font-size: 11px; }
             .arrow { font-size: 15px; }
             .action-icon { font-size: 30px; }
         }
@@ -301,9 +308,8 @@
                 height: 50px;
                 font-size: 16px;
             }
-            .guardian { font-size: 16px; }
+            .vampire { font-size: 16px; }
             .bloodwell::before { font-size: 16px; }
-            .shared .obstacle { font-size: 12px; }
             .arrow { font-size: 16px; }
             .action-icon { font-size: 40px; }
             h1 { font-size: 24px; }
@@ -329,7 +335,7 @@
         </div>
         <div id="class-info"></div>
         <div id="game-info">
-            <p>Current Player: <span id="current-player">P1</span> | AP Left: <span id="ap-left">4</span> | Turn: <span id="turn">1</span> | Obstacles: <span id="obstacle-count">0</span>/12</p>
+            <p>Current Player: <span id="current-player">P1</span> | AP Left: <span id="ap-left">4</span> | Turn: <span id="turn">1</span></p>
         </div>
         <div id="controls">
             <button id="undo-button" onclick="undoTurn()" disabled>Undo</button>
@@ -343,7 +349,6 @@
         const GRID_SIZE = 9;
         const players = ['P1', 'P2', 'P3', 'P4'];
         const classes = ['Sheriff', 'Vigilante', 'Outlaw', 'Bounty Hunter'];
-        const colors = { 'P1': 'white', 'P2': 'blue', 'P3': 'red', 'P4': 'green' };
         const apPerTurn = { 1: 4, 2: 5, 3: 6, 4: 8 };
         let gameState = {
             setupStep: 1,
@@ -351,53 +356,58 @@
             turn: 1,
             ap: apPerTurn[1],
             playerCount: 0,
-            guardians: {},
+            vampires: {},
             bloodwells: {},
-            obstacles: [],
-            obstacleCount: 0,
-            selectedGuardian: null,
+            hazards: [],
+            selectedVampire: null,
             selectedAction: null,
             playerClasses: {},
             playerNames: {},
-            silverSlugs: {},
+            silverBullets: {},
             cursed: {},
             usedAbilities: {},
             layout: null,
             turnHistory: [],
-            actionsThisTurn: []
+            actionsThisTurn: [],
+            availableHazards: {
+                tombstone: 4,
+                carcass: 4,
+                'grave-dust': 4,
+                dynamite: 3
+            }
         };
 
         const classInfo = {
             'Sheriff': {
-                description: 'A vampire lawman enforcing order in a chaotic frontier.',
+                description: 'A faction of Vampires enforcing order in a chaotic frontier.',
                 abilities: [
-                    { name: 'Under My Protection', type: 'passive', description: 'Bloodwells adjacent to a Sheriff’s Guardian are immune to regular shots.' },
-                    { name: 'Swift Justice', type: 'passive', description: 'At the end of the turn, after spending AP, choose one Guardian to move 1 square in its facing direction (0 AP).' },
-                    { name: 'Order Restored', type: 'active', cost: 3, description: 'Revive a Guardian, place adjacent to any Guardian or Bloodwell, once per game.' }
+                    { name: 'Under My Protection', type: 'passive', description: 'Bloodwells adjacent to a Sheriffs’ Vampire (within a 3x3 grid centered on the Vampire) are immune to regular shots.' },
+                    { name: 'Swift Justice', type: 'passive', description: 'At the end of the turn, after spending AP, the player may choose one Vampire to move 1 square forward in its facing direction (0 AP).' },
+                    { name: 'Order Restored', type: 'active', cost: 3, description: 'Revive a dead Sheriff, placing it adjacent to any of your Vampires or Bloodwells.' }
                 ]
             },
             'Vigilante': {
-                description: 'A vampire avenger seeking justice, using teamwork to punish wrongdoers.',
+                description: 'A faction of Vampires seeking justice, using teamwork to punish wrongdoers.',
                 abilities: [
-                    { name: 'Side by Side', type: 'passive', description: 'Split AP between two Guardians each turn.' },
-                    { name: 'Blood Brothers', type: 'passive', description: 'If both Guardians are within a 3x3 grid at the start of the turn, gain +1 AP for the turn, provided both use at least 1 AP.' },
-                    { name: 'Vengeance is Mine', type: 'active', cost: 0, description: 'Gain 7 AP next turn after a Bloodwell/Guardian is shot, split via Side by Side, once per game.' }
+                    { name: 'Side by Side', type: 'passive', description: 'Split AP between two Vampires each turn.' },
+                    { name: 'Blood Brothers', type: 'passive', description: 'If both Vampires are within a 3x3 grid at the start of the turn, gain +1 AP for the turn, provided both use at least 1 AP.' },
+                    { name: 'Vengeance is Mine', type: 'active', cost: 0, description: 'Gain 7 AP next turn after a Bloodwell/Vampire is shot, split via Side by Side.' }
                 ]
             },
             'Outlaw': {
-                description: 'A vampire bandit thriving on chaos, disrupting and escaping with speed.',
+                description: 'A faction of Vampires thriving on chaos, disrupting and escaping with speed.',
                 abilities: [
-                    { name: 'Daring Escape', type: 'passive', description: 'After shooting a Bloodwell (3 AP), turn to any direction and move up to 2 squares in that direction (1 AP), once per turn.' },
-                    { name: 'Hand Cannon', type: 'active', cost: 5, description: 'Shoot all in one direction up to 5 spaces, ignores obstacles except Under My Protection, once per game.' },
-                    { name: 'Rampage', type: 'active', cost: 2, description: 'Shoot left and right of facing direction, once per game.' }
+                    { name: 'Daring Escape', type: 'passive', description: 'After shooting a Bloodwell, pivot to any direction and move up to 2 squares in that direction, once per turn.' },
+                    { name: 'Hand Cannon', type: 'active', cost: 5, description: 'Fire a piercing shot in one direction up to 5 spaces, ignores Hazards except Under My Protection.' },
+                    { name: 'Rampage', type: 'active', cost: 2, description: 'Shoot left and right of facing direction.' }
                 ]
             },
             'Bounty Hunter': {
-                description: 'A vampire mercenary hunting for profit, using precision to eliminate targets.',
+                description: 'A faction of Vampires hunting for profit, using precision to eliminate targets.',
                 abilities: [
                     { name: 'Sharpshooter', type: 'passive', description: 'Shots ignore Tombstones in their line of sight.' },
-                    { name: 'Marked Man', type: 'passive', description: 'Shots on enemy Guardians curse them (move 1, shoot own square only, no throw, clear square to heal), instead of eliminating.' },
-                    { name: 'Contract Payoff', type: 'active', cost: 3, description: 'Shoot a Bloodwell; if successful, gain +3 AP next turn (max 8 AP) in 2P, +5 AP (max 10 AP) in 3P/4P, once per game.' }
+                    { name: 'Marked Man', type: 'passive', description: 'Shots on enemy Vampires curse them (move 1, shoot own square only, no throw, perform a Bloodbath to heal).' },
+                    { name: 'Contract Payoff', type: 'active', cost: 3, description: 'Shoot a Bloodwell; if successful, gain +3 AP next turn (max 8 AP) in 2P, +5 AP (max 10 AP) in 3P/4P.' }
                 ]
             }
         };
@@ -405,7 +415,7 @@
         const layouts = {
             '2P': [
                 {
-                    guardians: {
+                    vampires: {
                         'P1': [{ pos: 'A2', facing: 'S' }, { pos: 'C4', facing: 'S' }],
                         'P2': [{ pos: 'A7', facing: 'N' }, { pos: 'C9', facing: 'N' }]
                     },
@@ -413,18 +423,20 @@
                         'P1': ['B1', 'D3', 'F2'],
                         'P2': ['B6', 'D8', 'F7']
                     },
-                    obstacles: [
+                    hazards: [
                         { type: 'Tombstone', pos: 'E5' },
                         { type: 'Carcass', pos: 'D5' },
                         { type: 'Grave Dust', pos: 'F5' },
-                        { type: 'Dynamite', pos: 'G5' }
+                        { type: 'Tombstone', pos: 'G5' },
+                        { type: 'Carcass', pos: 'E4' },
+                        { type: 'Grave Dust', pos: 'E6' }
                     ]
                 },
                 // 25 more layouts generated off-screen
             ],
             '3P': [
                 {
-                    guardians: {
+                    vampires: {
                         'P1': [{ pos: 'A2', facing: 'S' }, { pos: 'C4', facing: 'S' }],
                         'P2': [{ pos: 'F2', facing: 'S' }, { pos: 'H4', facing: 'S' }],
                         'P3': [{ pos: 'D8', facing: 'N' }, { pos: 'F9', facing: 'N' }]
@@ -434,19 +446,20 @@
                         'P2': ['G1', 'I3', 'G5'],
                         'P3': ['C7', 'E6', 'G8']
                     },
-                    obstacles: [
+                    hazards: [
                         { type: 'Tombstone', pos: 'E5' },
                         { type: 'Carcass', pos: 'D5' },
                         { type: 'Grave Dust', pos: 'F5' },
-                        { type: 'Dynamite', pos: 'G5' },
-                        { type: 'Tombstone', pos: 'H5' }
+                        { type: 'Tombstone', pos: 'G5' },
+                        { type: 'Carcass', pos: 'H5' },
+                        { type: 'Grave Dust', pos: 'B7' }
                     ]
                 },
                 // 25 more layouts generated off-screen
             ],
             '4P': [
                 {
-                    guardians: {
+                    vampires: {
                         'P1': [{ pos: 'A2', facing: 'S' }, { pos: 'C4', facing: 'S' }],
                         'P2': [{ pos: 'F2', facing: 'S' }, { pos: 'H4', facing: 'S' }],
                         'P3': [{ pos: 'A7', facing: 'N' }, { pos: 'C9', facing: 'N' }],
@@ -458,13 +471,13 @@
                         'P3': ['B6', 'D8', 'A8'],
                         'P4': ['G6', 'I8', 'F8']
                     },
-                    obstacles: [
+                    hazards: [
                         { type: 'Tombstone', pos: 'E5' },
                         { type: 'Carcass', pos: 'D5' },
                         { type: 'Grave Dust', pos: 'F5' },
-                        { type: 'Dynamite', pos: 'G5' },
-                        { type: 'Tombstone', pos: 'E4' },
-                        { type: 'Carcass', pos: 'E6' }
+                        { type: 'Tombstone', pos: 'G5' },
+                        { type: 'Carcass', pos: 'E4' },
+                        { type: 'Grave Dust', pos: 'E6' }
                     ]
                 },
                 // 25 more layouts generated off-screen
@@ -502,13 +515,17 @@
                     </div>
                     <label for="name-${player}">Player ${playerNum} Name:</label>
                     <input type="text" id="name-${player}" placeholder="${player}" maxlength="20">
-                    <button onclick="backStep()">Back</button>
-                    <button onclick="nextStep()">Next</button>
+                    <button id="back-button-${playerNum}">Back</button>
+                    <button id="next-button-${playerNum}">Next</button>
                 `;
+                const backButton = document.getElementById(`back-button-${playerNum}`);
+                const nextButton = document.getElementById(`next-button-${playerNum}`);
+                backButton.addEventListener('click', backStep);
                 if (gameState.setupStep === gameState.playerCount + 1) {
-                    const nextButton = setupContent.querySelector('button[onclick="nextStep()"]');
                     nextButton.textContent = 'Start Game';
-                    nextButton.onclick = startGame;
+                    nextButton.addEventListener('click', startGame);
+                } else {
+                    nextButton.addEventListener('click', nextStep);
                 }
                 const nameInput = document.getElementById(`name-${player}`);
                 if (gameState.playerNames[player]) {
@@ -539,11 +556,20 @@
 
             const classInfoDiv = document.getElementById(`class-info-${player}`);
             const info = classInfo[className];
+            const passiveAbilities = info.abilities.filter(ability => ability.type === 'passive');
+            const activeAbilities = info.abilities.filter(ability => ability.type === 'active');
             classInfoDiv.innerHTML = `
                 <h3 class="class-name">${className}</h3>
                 <p class="class-description">${info.description}</p>
+                <h4>Passive Skills</h4>
                 <ul class="class-abilities">
-                    ${info.abilities.map(ability => `
+                    ${passiveAbilities.map(ability => `
+                        <li><strong>${ability.name}${ability.cost ? ` (${ability.cost} AP)` : ''}:</strong> ${ability.description}</li>
+                    `).join('')}
+                </ul>
+                <h4>Active Skills</h4>
+                <ul class="class-abilities">
+                    ${activeAbilities.map(ability => `
                         <li><strong>${ability.name}${ability.cost ? ` (${ability.cost} AP)` : ''}:</strong> ${ability.description}</li>
                     `).join('')}
                 </ul>
@@ -571,6 +597,7 @@
         }
 
         function startGame() {
+            console.log("startGame called");
             const playerNum = gameState.setupStep - 1;
             const player = `P${playerNum}`;
             if (!gameState.playerClasses[player]) {
@@ -583,43 +610,42 @@
             const layoutIndex = Math.floor(Math.random() * 26);
             const layout = layouts[`${gameState.playerCount}P`][layoutIndex];
             gameState.layout = layout;
-            gameState.guardians = {};
+            gameState.vampires = {};
             gameState.bloodwells = {};
-            gameState.obstacles = layout.obstacles;
-            gameState.obstacleCount = layout.obstacles.length;
+            gameState.hazards = layout.hazards;
+            gameState.availableHazards.tombstone = 4 - layout.hazards.filter(h => h.type === 'Tombstone').length;
+            gameState.availableHazards.carcass = 4 - layout.hazards.filter(h => h.type === 'Carcass').length;
+            gameState.availableHazards['grave-dust'] = 4 - layout.hazards.filter(h => h.type === 'Grave Dust').length;
+            gameState.availableHazards.dynamite = 3;
 
             for (let i = 1; i <= gameState.playerCount; i++) {
                 const p = `P${i}`;
-                gameState.guardians[p] = layout.guardians[p].map((g, idx) => ({
-                    id: `${p}G${idx + 1}`,
+                gameState.vampires[p] = layout.vampires[p].map((g, idx) => ({
+                    id: `${p}V${idx + 1}`,
                     pos: g.pos,
                     facing: g.facing,
                     alive: true
                 }));
                 gameState.bloodwells[p] = layout.bloodwells[p];
-                gameState.silverSlugs[p] = 1;
-                gameState.cursed[`${p}G1`] = false;
-                gameState.cursed[`${p}G2`] = false;
+                gameState.silverBullets[p] = 1;
+                gameState.cursed[`${p}V1`] = false;
+                gameState.cursed[`${p}V2`] = false;
                 gameState.usedAbilities[p] = {};
-            }
-
-            if (gameState.playerCount === 4) {
-                const p4Well = prompt(`${gameState.playerNames['P4']}: Place free Tombstone adjacent to a Bloodwell (e.g., I7 next to I8):`, "I7");
-                gameState.obstacles.push({ type: 'Tombstone', pos: p4Well });
-                gameState.obstacleCount++;
             }
 
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
             renderGrid();
-            updateGameInfo();
-            updateClassInfo();
             updateActionIcons();
+            updateClassInfo();
+            updateGameInfo();
         }
 
         function renderGrid() {
+            console.log("renderGrid called");
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
+            grid.style.display = 'grid';
             for (let row = 1; row <= GRID_SIZE; row++) {
                 for (let col = 1; col <= GRID_SIZE; col++) {
                     const pos = String.fromCharCode(64 + col) + row;
@@ -629,23 +655,23 @@
                     cell.onclick = () => selectCell(pos);
 
                     let content = '';
-                    let hasGuardian = false;
-                    let hasObstacle = false;
-                    let obstacleType = '';
+                    let hasVampire = false;
+                    let hasHazard = false;
+                    let hazardType = '';
 
-                    for (let player in gameState.guardians) {
-                        const guardian = gameState.guardians[player].find(g => g.pos === pos && g.alive);
-                        if (guardian) {
+                    for (let player in gameState.vampires) {
+                        const vampire = gameState.vampires[player].find(g => g.pos === pos && g.alive);
+                        if (vampire) {
                             content = '♟️';
-                            cell.classList.add('guardian');
+                            cell.classList.add('vampire');
                             cell.classList.add(gameState.playerClasses[player].toLowerCase());
-                            if (gameState.cursed[guardian.id]) cell.classList.add('cursed');
-                            hasGuardian = true;
+                            if (gameState.cursed[vampire.id]) cell.classList.add('cursed');
+                            hasVampire = true;
                             break;
                         }
                     }
 
-                    if (!hasGuardian) {
+                    if (!hasVampire) {
                         for (let player in gameState.bloodwells) {
                             if (gameState.bloodwells[player].includes(pos)) {
                                 content = '';
@@ -656,21 +682,14 @@
                         }
                     }
 
-                    const obstacle = gameState.obstacles.find(o => o.pos === pos);
-                    if (obstacle) {
-                        hasObstacle = true;
-                        obstacleType = obstacle.type.toLowerCase().replace(' ', '-');
-                        if (!hasGuardian) {
+                    const hazard = gameState.hazards.find(o => o.pos === pos);
+                    if (hazard) {
+                        hasHazard = true;
+                        hazardType = hazard.type.toLowerCase().replace(' ', '-');
+                        if (!hasVampire) {
                             content = '';
-                            cell.classList.add(obstacleType);
+                            cell.classList.add(hazardType);
                         }
-                    }
-
-                    if (hasGuardian && hasObstacle) {
-                        cell.classList.add('shared');
-                        const obstacleSpan = document.createElement('span');
-                        obstacleSpan.className = `obstacle ${obstacleType}`;
-                        cell.appendChild(obstacleSpan);
                     }
 
                     cell.innerHTML += content;
@@ -678,8 +697,8 @@
                 }
             }
 
-            if (gameState.selectedGuardian) {
-                const pos = gameState.selectedGuardian.pos;
+            if (gameState.selectedVampire) {
+                const pos = gameState.selectedVampire.pos;
                 const cell = document.getElementById(pos);
                 cell.classList.add('selected');
 
@@ -707,8 +726,11 @@
         }
 
         function updateActionIcons() {
+            console.log("updateActionIcons called");
             const actionsDiv = document.getElementById('actions');
             const specialActionsDiv = document.getElementById('special-actions');
+            actionsDiv.style.display = 'flex';
+            specialActionsDiv.style.display = 'flex';
             actionsDiv.innerHTML = `
                 <div class="action-icon" onclick="selectAction('shoot')">🔫</div>
                 <span class="action-separator">|</span>
@@ -722,13 +744,13 @@
             `;
 
             let specialActions = [];
-            if (gameState.selectedGuardian) {
-                const pos = gameState.selectedGuardian.pos;
-                const obstacle = gameState.obstacles.find(o => o.pos === pos);
-                if (obstacle && obstacle.type === 'Dynamite') {
+            if (gameState.selectedVampire) {
+                const pos = gameState.selectedVampire.pos;
+                const hazard = gameState.hazards.find(o => o.pos === pos);
+                if (hazard && hazard.type === 'Dynamite') {
                     specialActions.push(`<div class="action-icon" onclick="selectAction('bite')">🍽️💥🤢</div>`);
                 }
-                if (obstacle && obstacle.type === 'Grave Dust') {
+                if (hazard && hazard.type === 'Grave Dust') {
                     specialActions.push(`<div class="action-icon" onclick="selectAction('dispel')">🪄</div>`);
                 }
             }
@@ -754,8 +776,8 @@
                 specialActions.push(`<div class="action-icon" onclick="selectAbility('Contract Payoff')">📜💰</div>`);
             }
 
-            if (gameState.silverSlugs[player] > 0) {
-                specialActions.push(`<div class="action-icon" onclick="selectAction('silverSlug')">🔫💎</div>`);
+            if (gameState.silverBullets[player] > 0) {
+                specialActions.push(`<div class="action-icon" onclick="selectAction('silverBullet')">🔫💎</div>`);
             }
 
             specialActionsDiv.innerHTML = specialActions.join('<span class="action-separator">|</span>');
@@ -763,14 +785,14 @@
 
         function selectCell(pos) {
             const player = players[gameState.currentPlayer];
-            const guardian = gameState.guardians[player].find(g => g.pos === pos && g.alive);
-            if (guardian) {
-                gameState.selectedGuardian = guardian;
+            const vampire = gameState.vampires[player].find(g => g.pos === pos && g.alive);
+            if (vampire) {
+                gameState.selectedVampire = vampire;
                 gameState.selectedAction = null;
                 renderGrid();
                 updateClassInfo();
                 updateActionIcons();
-            } else if (gameState.selectedGuardian && gameState.selectedAction) {
+            } else if (gameState.selectedVampire && gameState.selectedAction) {
                 executeAction(pos);
             }
         }
@@ -781,9 +803,13 @@
             updateActionIcons();
         }
 
-        function selectThrow(obstacle) {
+        function selectThrow(hazard) {
+            if (gameState.availableHazards[hazard.toLowerCase().replace(' ', '-')] <= 0) {
+                alert(`No ${hazard} Hazards available to throw!`);
+                return;
+            }
             gameState.selectedAction = 'throw';
-            gameState.selectedObstacle = obstacle;
+            gameState.selectedHazard = hazard;
             renderGrid();
         }
 
@@ -797,20 +823,20 @@
         }
 
         function handleArrowClick(direction) {
-            if (!gameState.selectedGuardian) return;
-            const guardian = gameState.selectedGuardian;
-            if (gameState.cursed[guardian.id]) {
-                alert("This Guardian is cursed and cannot move or turn!");
+            if (!gameState.selectedVampire) return;
+            const vampire = gameState.selectedVampire;
+            if (gameState.cursed[vampire.id]) {
+                alert("This Vampire is cursed and cannot move more than 1 square!");
                 return;
             }
 
-            if (guardian.facing === direction) {
+            if (vampire.facing === direction) {
                 gameState.selectedAction = 'move';
             } else {
-                gameState.selectedAction = 'turn';
+                gameState.selectedAction = 'pivot';
                 gameState.selectedDirection = direction;
             }
-            const [col, row] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
+            const [col, row] = [vampire.pos.charCodeAt(0) - 64, parseInt(vampire.pos[1])];
             let targetPos;
             if (direction === 'N') targetPos = `${String.fromCharCode(64 + col)}${row - 1}`;
             if (direction === 'S') targetPos = `${String.fromCharCode(64 + col)}${row + 1}`;
@@ -821,102 +847,108 @@
 
         function executeAction(targetPos) {
             const player = players[gameState.currentPlayer];
-            const guardian = gameState.selectedGuardian;
+            const vampire = gameState.selectedVampire;
             const action = gameState.selectedAction;
             let apCost = 0;
 
             const currentState = JSON.parse(JSON.stringify({
-                guardians: gameState.guardians,
+                vampires: gameState.vampires,
                 bloodwells: gameState.bloodwells,
-                obstacles: gameState.obstacles,
-                obstacleCount: gameState.obstacleCount,
+                hazards: gameState.hazards,
                 cursed: gameState.cursed,
                 usedAbilities: gameState.usedAbilities,
                 ap: gameState.ap,
-                silverSlugs: gameState.silverSlugs
+                silverBullets: gameState.silverBullets,
+                availableHazards: gameState.availableHazards
             }));
             gameState.actionsThisTurn.push(currentState);
 
             if (action === 'move') {
                 apCost = 1;
                 if (gameState.ap >= apCost) {
-                    const newPos = canMove(guardian, targetPos);
+                    const newPos = canMove(vampire, targetPos);
                     if (newPos) {
-                        guardian.pos = targetPos;
+                        vampire.pos = targetPos;
                         gameState.ap -= apCost;
-                        alert(`${gameState.playerNames[player]}'s ${guardian.id} moved to ${targetPos}`);
+                        alert(`${gameState.playerNames[player]}'s ${vampire.id} moved to ${targetPos}`);
+                        if (gameState.cursed[vampire.id]) {
+                            const hasBloodwell = gameState.bloodwells[player].includes(targetPos);
+                            const hasHazard = gameState.hazards.some(h => h.pos === targetPos);
+                            if (hasBloodwell && !hasHazard) {
+                                gameState.cursed[vampire.id] = false;
+                                alert(`${gameState.playerNames[player]}'s ${vampire.id} performed a Bloodbath at ${targetPos} and is no longer cursed!`);
+                            }
+                        }
                     }
                 }
-            } else if (action === 'turn') {
+            } else if (action === 'pivot') {
                 apCost = 1;
                 if (gameState.ap >= apCost) {
-                    guardian.facing = gameState.selectedDirection;
+                    vampire.facing = gameState.selectedDirection;
                     gameState.ap -= apCost;
-                    alert(`${gameState.playerNames[player]}'s ${guardian.id} turned to face ${guardian.facing}`);
+                    alert(`${gameState.playerNames[player]}'s ${vampire.id} pivoted to face ${vampire.facing}`);
                 }
             } else if (action === 'shoot') {
                 apCost = 3;
                 if (gameState.ap >= apCost) {
-                    const target = canShoot(guardian, targetPos);
+                    const target = canShoot(vampire, targetPos);
                     if (target) {
-                        handleShot(guardian, targetPos);
+                        handleShot(vampire, targetPos);
                         gameState.ap -= apCost;
                     }
                 }
             } else if (action === 'throw') {
-                const obstacleType = gameState.selectedObstacle;
-                apCost = obstacleType === 'Dynamite' ? 2 : 1;
-                if (gameState.ap >= apCost && gameState.obstacleCount < 12) {
-                    const canThrow = canThrowObstacle(guardian, targetPos, obstacleType);
+                const hazardType = gameState.selectedHazard;
+                apCost = hazardType === 'Dynamite' ? 2 : 1;
+                if (gameState.ap >= apCost) {
+                    const canThrow = canThrowHazard(vampire, targetPos, hazardType);
                     if (canThrow) {
-                        gameState.obstacles.push({ type: obstacleType, pos: targetPos });
-                        gameState.obstacleCount++;
+                        gameState.hazards.push({ type: hazardType, pos: targetPos });
+                        gameState.availableHazards[hazardType.toLowerCase().replace(' ', '-')]--;
                         gameState.ap -= apCost;
-                        alert(`${gameState.playerNames[player]}'s ${guardian.id} threw ${obstacleType} to ${targetPos}`);
+                        alert(`${gameState.playerNames[player]}'s ${vampire.id} threw ${hazardType} to ${targetPos}`);
                     }
-                } else if (gameState.obstacleCount >= 12) {
-                    alert("Obstacle limit (12) reached!");
                 }
             } else if (action === 'dispel') {
                 apCost = 3;
                 if (gameState.ap >= apCost) {
-                    const pos = guardian.pos;
-                    const obstacle = gameState.obstacles.find(o => o.pos === pos && o.type === 'Grave Dust');
-                    if (obstacle) {
-                        gameState.obstacles = gameState.obstacles.filter(o => o !== obstacle);
-                        gameState.obstacleCount--;
+                    const pos = vampire.pos;
+                    const hazard = gameState.hazards.find(o => o.pos === pos && o.type === 'Grave Dust');
+                    if (hazard) {
+                        gameState.hazards = gameState.hazards.filter(o => o !== hazard);
+                        gameState.availableHazards['grave-dust']++;
                         gameState.ap -= apCost;
-                        alert(`${gameState.playerNames[player]}'s ${guardian.id} dispelled the Grave Dust at ${pos}`);
+                        alert(`${gameState.playerNames[player]}'s ${vampire.id} dispelled the Grave Dust at ${pos}`);
                     }
                 }
             } else if (action === 'bite') {
                 apCost = 1;
                 if (gameState.ap >= apCost) {
-                    const pos = guardian.pos;
-                    const obstacle = gameState.obstacles.find(o => o.pos === pos && o.type === 'Dynamite');
-                    if (obstacle) {
-                        gameState.obstacles = gameState.obstacles.filter(o => o !== obstacle);
-                        gameState.obstacleCount--;
-                        gameState.cursed[guardian.id] = true;
+                    const pos = vampire.pos;
+                    const hazard = gameState.hazards.find(o => o.pos === pos && o.type === 'Dynamite');
+                    if (hazard) {
+                        gameState.hazards = gameState.hazards.filter(o => o !== hazard);
+                        gameState.availableHazards.dynamite++;
+                        gameState.cursed[vampire.id] = true;
                         gameState.ap -= apCost;
-                        alert(`${gameState.playerNames[player]}'s ${guardian.id} bit the fuse at ${pos} and is now cursed!`);
+                        alert(`${gameState.playerNames[player]}'s ${vampire.id} bit the fuse at ${pos} and is now cursed!`);
                     }
                 }
             } else if (action === 'bloodRitual') {
                 apCost = 3;
                 if (gameState.ap >= apCost) {
-                    const target = canShoot(guardian, targetPos);
+                    const target = canShoot(vampire, targetPos);
                     if (target && gameState.bloodwells[player].includes(targetPos)) {
                         gameState.bloodwells[player] = gameState.bloodwells[player].filter(pos => pos !== targetPos);
-                        const deadGuardian = gameState.guardians[player].find(g => !g.alive);
-                        if (deadGuardian) {
-                            deadGuardian.alive = true;
-                            deadGuardian.pos = targetPos;
+                        const deadVampire = gameState.vampires[player].find(g => !g.alive);
+                        if (deadVampire) {
+                            deadVampire.alive = true;
+                            deadVampire.pos = targetPos;
                             gameState.ap -= apCost;
                             gameState.usedAbilities[player]['Blood Ritual'] = true;
-                            alert(`${gameState.playerNames[player]} used Blood Ritual: Sacrificed a Bloodwell at ${targetPos} to revive ${deadGuardian.id}`);
+                            alert(`${gameState.playerNames[player]} used Blood Ritual: Sacrificed a Bloodwell at ${targetPos} to revive ${deadVampire.id}`);
                         } else {
-                            alert("No dead Guardians to revive!");
+                            alert("No dead Vampires to revive! The Bloodwell is still destroyed.");
                             gameState.actionsThisTurn.pop();
                             return;
                         }
@@ -926,20 +958,28 @@
                         return;
                     }
                 }
-            } else if (action === 'silverSlug') {
+            } else if (action === 'silverBullet') {
                 apCost = 3;
-                if (gameState.ap >= apCost && gameState.silverSlugs[player] > 0) {
-                    const target = canShoot(guardian, targetPos);
+                if (gameState.ap >= apCost && gameState.silverBullets[player] > 0) {
+                    const target = canShoot(vampire, targetPos);
                     if (target) {
-                        for (let p in gameState.guardians) {
-                            const targetGuardian = gameState.guardians[p].find(g => g.pos === targetPos && g.alive);
-                            if (targetGuardian && p !== player) {
-                                targetGuardian.alive = false;
-                                gameState.silverSlugs[player]--;
+                        let hitVampire = false;
+                        for (let p in gameState.vampires) {
+                            const targetVampire = gameState.vampires[p].find(g => g.pos === targetPos && g.alive);
+                            if (targetVampire && p !== player) {
+                                targetVampire.alive = false;
+                                gameState.silverBullets[player]--;
                                 gameState.ap -= apCost;
-                                alert(`${gameState.playerNames[player]}'s ${guardian.id} used a Silver Slug to eliminate ${gameState.playerNames[p]}'s ${targetGuardian.id} at ${targetPos}`);
+                                alert(`${gameState.playerNames[player]}'s ${vampire.id} used a Silver Bullet to eliminate ${gameState.playerNames[p]}'s ${targetVampire.id} at ${targetPos}`);
+                                hitVampire = true;
                                 break;
                             }
+                        }
+                        if (!hitVampire) {
+                            handleShot(vampire, targetPos, true);
+                            gameState.silverBullets[player]--;
+                            gameState.ap -= apCost;
+                            alert(`${gameState.playerNames[player]}'s ${vampire.id} used a Silver Bullet but missed a Vampire! The bullet acted as a normal shot.`);
                         }
                     }
                 }
@@ -948,15 +988,15 @@
                 if (ability === 'Order Restored') {
                     apCost = 3;
                     if (gameState.ap >= apCost) {
-                        const deadGuardian = gameState.guardians[player].find(g => !g.alive);
-                        if (deadGuardian) {
-                            deadGuardian.alive = true;
-                            deadGuardian.pos = targetPos;
+                        const deadVampire = gameState.vampires[player].find(g => !g.alive);
+                        if (deadVampire) {
+                            deadVampire.alive = true;
+                            deadVampire.pos = targetPos;
                             gameState.ap -= apCost;
                             gameState.usedAbilities[player]['Order Restored'] = true;
-                            alert(`${gameState.playerNames[player]} used Order Restored: Revived ${deadGuardian.id} at ${targetPos}`);
+                            alert(`${gameState.playerNames[player]} used Order Restored: Revived ${deadVampire.id} at ${targetPos}`);
                         } else {
-                            alert("No dead Guardians to revive!");
+                            alert("No dead Vampires to revive!");
                             gameState.actionsThisTurn.pop();
                             return;
                         }
@@ -968,9 +1008,9 @@
                 } else if (ability === 'Hand Cannon') {
                     apCost = 5;
                     if (gameState.ap >= apCost) {
-                        const direction = prompt("Choose direction for Hand Cannon (N, S, E, W):", guardian.facing);
+                        const direction = prompt("Choose direction for Hand Cannon (N, S, E, W):", vampire.facing);
                         if (['N', 'S', 'E', 'W'].includes(direction)) {
-                            handleHandCannon(guardian, direction);
+                            handleHandCannon(vampire, direction);
                             gameState.ap -= apCost;
                             gameState.usedAbilities[player]['Hand Cannon'] = true;
                         } else {
@@ -982,14 +1022,14 @@
                 } else if (ability === 'Rampage') {
                     apCost = 2;
                     if (gameState.ap >= apCost) {
-                        handleRampage(guardian);
+                        handleRampage(vampire);
                         gameState.ap -= apCost;
                         gameState.usedAbilities[player]['Rampage'] = true;
                     }
                 } else if (ability === 'Contract Payoff') {
                     apCost = 3;
                     if (gameState.ap >= apCost) {
-                        const target = canShoot(guardian, targetPos);
+                        const target = canShoot(vampire, targetPos);
                         if (target && target.includes('B')) {
                             gameState.bloodwells[player].includes(targetPos) ? gameState.bloodwells[player] = gameState.bloodwells[player].filter(pos => pos !== targetPos) : null;
                             gameState.ap -= apCost;
@@ -1005,7 +1045,7 @@
                 }
             }
 
-            gameState.selectedGuardian = null;
+            gameState.selectedVampire = null;
             gameState.selectedAction = null;
             renderGrid();
             updateGameInfo();
@@ -1015,22 +1055,50 @@
             document.getElementById('undo-button').disabled = gameState.actionsThisTurn.length === 0;
         }
 
-        function canMove(guardian, targetPos) {
+        function canMove(vampire, targetPos) {
             const [targetCol, targetRow] = [targetPos.charCodeAt(0) - 64, parseInt(targetPos[1])];
-            const [currentCol, currentRow] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
-            const direction = guardian.facing;
-            if (direction === 'N' && targetRow < currentRow && targetCol === currentCol) return true;
-            if (direction === 'S' && targetRow > currentRow && targetCol === currentCol) return true;
-            if (direction === 'E' && targetCol > currentCol && targetRow === currentRow) return true;
-            if (direction === 'W' && targetCol < currentCol && targetRow === currentRow) return true;
+            const [currentCol, currentRow] = [vampire.pos.charCodeAt(0) - 64, parseInt(vampire.pos[1])];
+            const direction = vampire.facing;
+            if (direction === 'N' && targetRow < currentRow && targetCol === currentCol) {
+                const targetHazard = gameState.hazards.find(h => h.pos === targetPos);
+                if (targetHazard && targetHazard.type === 'Carcass') {
+                    alert("Cannot move through a Carcass!");
+                    return false;
+                }
+                return true;
+            }
+            if (direction === 'S' && targetRow > currentRow && targetCol === currentCol) {
+                const targetHazard = gameState.hazards.find(h => h.pos === targetPos);
+                if (targetHazard && targetHazard.type === 'Carcass') {
+                    alert("Cannot move through a Carcass!");
+                    return false;
+                }
+                return true;
+            }
+            if (direction === 'E' && targetCol > currentCol && targetRow === currentRow) {
+                const targetHazard = gameState.hazards.find(h => h.pos === targetPos);
+                if (targetHazard && targetHazard.type === 'Carcass') {
+                    alert("Cannot move through a Carcass!");
+                    return false;
+                }
+                return true;
+            }
+            if (direction === 'W' && targetCol < currentCol && targetRow === currentRow) {
+                const targetHazard = gameState.hazards.find(h => h.pos === targetPos);
+                if (targetHazard && targetHazard.type === 'Carcass') {
+                    alert("Cannot move through a Carcass!");
+                    return false;
+                }
+                return true;
+            }
             alert("Invalid move direction!");
             return false;
         }
 
-        function canShoot(guardian, targetPos) {
+        function canShoot(vampire, targetPos) {
             const [targetCol, targetRow] = [targetPos.charCodeAt(0) - 64, parseInt(targetPos[1])];
-            const [currentCol, currentRow] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
-            const direction = guardian.facing;
+            const [currentCol, currentRow] = [vampire.pos.charCodeAt(0) - 64, parseInt(vampire.pos[1])];
+            const direction = vampire.facing;
             let path = [];
             if (direction === 'N' && targetCol === currentCol && targetRow < currentRow) {
                 for (let r = currentRow - 1; r >= targetRow; r--) path.push(`${String.fromCharCode(64 + currentCol)}${r}`);
@@ -1046,21 +1114,21 @@
             }
 
             for (let pos of path.slice(0, -1)) {
-                const obstacle = gameState.obstacles.find(o => o.pos === pos);
-                if (obstacle) {
-                    if (gameState.playerClasses[players[gameState.currentPlayer]] === 'Bounty Hunter' && obstacle.type === 'Tombstone') {
+                const hazard = gameState.hazards.find(o => o.pos === pos);
+                if (hazard) {
+                    if (gameState.playerClasses[players[gameState.currentPlayer]] === 'Bounty Hunter' && hazard.type === 'Tombstone') {
                         continue;
                     }
-                    if (obstacle.type !== 'Grave Dust') {
-                        alert("Shot blocked by obstacle!");
+                    if (hazard.type === 'Tombstone' || hazard.type === 'Dynamite') {
+                        alert("Shot blocked by Hazard!");
                         return null;
                     }
                 }
             }
 
-            for (let player in gameState.guardians) {
-                const targetGuardian = gameState.guardians[player].find(g => g.pos === path[path.length - 1] && g.alive);
-                if (targetGuardian && gameState.playerClasses[player] === 'Sheriff') {
+            for (let player in gameState.vampires) {
+                const targetVampire = gameState.vampires[player].find(g => g.pos === path[path.length - 1] && g.alive);
+                if (targetVampire && gameState.playerClasses[player] === 'Sheriff') {
                     for (let bloodwell of gameState.bloodwells[player]) {
                         const [bCol, bRow] = [bloodwell.charCodeAt(0) - 64, parseInt(bloodwell[1])];
                         if (Math.abs(bCol - targetCol) <= 1 && Math.abs(bRow - targetRow) <= 1) {
@@ -1074,19 +1142,12 @@
             return path[path.length - 1];
         }
 
-        function handleShot(guardian, targetPos) {
+        function handleShot(vampire, targetPos, isSilverBullet = false) {
             const player = players[gameState.currentPlayer];
-            const target = gameState.bloodwells[player].includes(targetPos) ? `${player}B` : null;
-            if (target) {
-                alert("Cannot shoot your own Bloodwell!");
-                gameState.actionsThisTurn.pop();
-                return;
-            }
-
             for (let p in gameState.bloodwells) {
-                if (p !== player && gameState.bloodwells[p].includes(targetPos)) {
+                if (gameState.bloodwells[p].includes(targetPos)) {
                     gameState.bloodwells[p] = gameState.bloodwells[p].filter(pos => pos !== targetPos);
-                    alert(`${gameState.playerNames[player]}'s ${guardian.id} shot ${gameState.playerNames[p]}'s Bloodwell at ${targetPos}`);
+                    alert(`${gameState.playerNames[player]}'s ${vampire.id} shot ${gameState.playerNames[p]}'s Bloodwell at ${targetPos}`);
                     if (gameState.playerClasses[p] === 'Vigilante') {
                         alert(`${gameState.playerNames[p]} triggers Vengeance is Mine: +7 AP next turn`);
                         gameState.usedAbilities[p]['Vengeance is Mine'] = true;
@@ -1099,27 +1160,30 @@
                 }
             }
 
-            for (let p in gameState.guardians) {
-                const targetGuardian = gameState.guardians[p].find(g => g.pos === targetPos && g.alive);
-                if (targetGuardian) {
+            for (let p in gameState.vampires) {
+                const targetVampire = gameState.vampires[p].find(g => g.pos === targetPos && g.alive);
+                if (targetVampire) {
                     if (gameState.playerClasses[player] === 'Bounty Hunter') {
-                        gameState.cursed[targetGuardian.id] = true;
-                        alert(`${gameState.playerNames[player]}'s ${guardian.id} cursed ${gameState.playerNames[p]}'s ${targetGuardian.id} with Marked Man`);
+                        gameState.cursed[targetVampire.id] = true;
+                        alert(`${gameState.playerNames[player]}'s ${vampire.id} cursed ${gameState.playerNames[p]}'s ${targetVampire.id} with Marked Man`);
+                    } else if (isSilverBullet) {
+                        targetVampire.alive = false;
+                        alert(`${gameState.playerNames[player]}'s ${vampire.id} used a Silver Bullet to eliminate ${gameState.playerNames[p]}'s ${targetVampire.id} at ${targetPos}`);
                     } else {
-                        alert("Shot ignored—use silver slug to eliminate!");
+                        alert("Shot ignored—use a Silver Bullet to eliminate!");
                     }
                     return;
                 }
             }
 
-            const obstacle = gameState.obstacles.find(o => o.pos === targetPos);
-            if (obstacle) {
-                if (obstacle.type === 'Dynamite') {
+            const hazard = gameState.hazards.find(o => o.pos === targetPos);
+            if (hazard) {
+                if (hazard.type === 'Dynamite') {
                     handleDynamiteExplosion(targetPos);
                 } else {
-                    gameState.obstacles = gameState.obstacles.filter(o => o.pos !== targetPos);
-                    gameState.obstacleCount--;
-                    alert(`${gameState.playerNames[player]}'s ${guardian.id} destroyed ${obstacle.type} at ${targetPos}`);
+                    gameState.hazards = gameState.hazards.filter(o => o.pos !== targetPos);
+                    gameState.availableHazards[hazard.type.toLowerCase().replace(' ', '-')]++;
+                    alert(`${gameState.playerNames[player]}'s ${vampire.id} destroyed ${hazard.type} at ${targetPos}`);
                 }
             }
         }
@@ -1134,8 +1198,8 @@
                 }
             }
 
-            gameState.obstacles = gameState.obstacles.filter(o => o.pos !== pos);
-            gameState.obstacleCount--;
+            gameState.hazards = gameState.hazards.filter(o => o.pos !== pos);
+            gameState.availableHazards.dynamite++;
             alert(`Dynamite exploded at ${pos}, affecting ${affected.length} squares`);
 
             for (let p in gameState.bloodwells) {
@@ -1144,12 +1208,20 @@
                     showEliminationMessage(p);
                 }
             }
+
+            gameState.hazards = gameState.hazards.filter(h => !affected.includes(h.pos));
+            affected.forEach(pos => {
+                const hazard = gameState.hazards.find(h => h.pos === pos);
+                if (hazard) {
+                    gameState.availableHazards[hazard.type.toLowerCase().replace(' ', '-')]++;
+                }
+            });
         }
 
-        function canThrowObstacle(guardian, targetPos, type) {
+        function canThrowHazard(vampire, targetPos, type) {
             const [targetCol, targetRow] = [targetPos.charCodeAt(0) - 64, parseInt(targetPos[1])];
-            const [currentCol, currentRow] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
-            const direction = guardian.facing;
+            const [currentCol, currentRow] = [vampire.pos.charCodeAt(0) - 64, parseInt(vampire.pos[1])];
+            const direction = vampire.facing;
             let path = [];
             if (direction === 'N' && targetCol === currentCol && targetRow < currentRow) {
                 for (let r = currentRow - 1; r >= targetRow; r--) path.push(`${String.fromCharCode(64 + currentCol)}${r}`);
@@ -1170,18 +1242,18 @@
             }
 
             for (let pos of path.slice(0, -1)) {
-                if (gameState.obstacles.some(o => o.pos === pos) || Object.values(gameState.guardians).flat().some(g => g.pos === pos && g.alive)) {
+                if (gameState.hazards.some(o => o.pos === pos && o.type === 'Carcass') || Object.values(gameState.vampires).flat().some(g => g.pos === pos && g.alive)) {
                     alert("Throw path blocked!");
                     return false;
                 }
             }
 
-            const targetOccupied = Object.values(gameState.guardians).flat().some(g => g.pos === targetPos && g.alive) || gameState.obstacles.some(o => o.pos === targetPos);
+            const targetOccupied = Object.values(gameState.vampires).flat().some(g => g.pos === targetPos && g.alive) || gameState.hazards.some(o => o.pos === targetPos);
             if (type === 'Grave Dust' && targetOccupied) {
-                const targetGuardian = Object.values(gameState.guardians).flat().find(g => g.pos === targetPos && g.alive);
-                if (targetGuardian) {
-                    gameState.cursed[targetGuardian.id] = true;
-                    alert(`${guardian.id} cursed ${targetGuardian.id} with Grave Dust`);
+                const targetVampire = Object.values(gameState.vampires).flat().find(g => g.pos === targetPos && g.alive);
+                if (targetVampire) {
+                    gameState.cursed[targetVampire.id] = true;
+                    alert(`${vampire.id} cursed ${targetVampire.id} with Grave Dust`);
                     return false;
                 }
             } else if (targetOccupied) {
@@ -1192,8 +1264,8 @@
             return true;
         }
 
-        function handleHandCannon(guardian, direction) {
-            const [currentCol, currentRow] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
+        function handleHandCannon(vampire, direction) {
+            const [currentCol, currentRow] = [vampire.pos.charCodeAt(0) - 64, parseInt(vampire.pos[1])];
             let path = [];
             if (direction === 'N') {
                 for (let r = currentRow - 1; r >= Math.max(1, currentRow - 5); r--) path.push(`${String.fromCharCode(64 + currentCol)}${r}`);
@@ -1209,25 +1281,25 @@
                 for (let p in gameState.bloodwells) {
                     if (gameState.bloodwells[p].includes(pos)) {
                         gameState.bloodwells[p] = gameState.bloodwells[p].filter(b => b !== pos);
-                        alert(`${gameState.playerNames[players[gameState.currentPlayer]]}'s ${guardian.id} Hand Cannon hit ${gameState.playerNames[p]}'s Bloodwell at ${pos}`);
+                        alert(`${gameState.playerNames[players[gameState.currentPlayer]]}'s ${vampire.id} Hand Cannon hit ${gameState.playerNames[p]}'s Bloodwell at ${pos}`);
                     }
                 }
-                const obstacle = gameState.obstacles.find(o => o.pos === pos);
-                if (obstacle) {
-                    if (obstacle.type === 'Dynamite') {
+                const hazard = gameState.hazards.find(o => o.pos === pos);
+                if (hazard) {
+                    if (hazard.type === 'Dynamite') {
                         handleDynamiteExplosion(pos);
                     } else {
-                        gameState.obstacles = gameState.obstacles.filter(o => o.pos !== pos);
-                        gameState.obstacleCount--;
-                        alert(`${gameState.playerNames[players[gameState.currentPlayer]]}'s ${guardian.id} Hand Cannon destroyed ${obstacle.type} at ${pos}`);
+                        gameState.hazards = gameState.hazards.filter(o => o.pos !== pos);
+                        gameState.availableHazards[hazard.type.toLowerCase().replace(' ', '-')]++;
+                        alert(`${gameState.playerNames[players[gameState.currentPlayer]]}'s ${vampire.id} Hand Cannon destroyed ${hazard.type} at ${pos}`);
                     }
                 }
             }
         }
 
-        function handleRampage(guardian) {
-            const [col, row] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
-            const direction = guardian.facing;
+        function handleRampage(vampire) {
+            const [col, row] = [vampire.pos.charCodeAt(0) - 64, parseInt(vampire.pos[1])];
+            const direction = vampire.facing;
             let leftPos, rightPos;
             if (direction === 'N' || direction === 'S') {
                 leftPos = col > 1 ? `${String.fromCharCode(64 + col - 1)}${row}` : null;
@@ -1242,17 +1314,17 @@
                     for (let p in gameState.bloodwells) {
                         if (gameState.bloodwells[p].includes(pos)) {
                             gameState.bloodwells[p] = gameState.bloodwells[p].filter(b => b !== pos);
-                            alert(`${gameState.playerNames[players[gameState.currentPlayer]]}'s ${guardian.id} Rampage hit ${gameState.playerNames[p]}'s Bloodwell at ${pos}`);
+                            alert(`${gameState.playerNames[players[gameState.currentPlayer]]}'s ${vampire.id} Rampage hit ${gameState.playerNames[p]}'s Bloodwell at ${pos}`);
                         }
                     }
-                    const obstacle = gameState.obstacles.find(o => o.pos === pos);
-                    if (obstacle) {
-                        if (obstacle.type === 'Dynamite') {
+                    const hazard = gameState.hazards.find(o => o.pos === pos);
+                    if (hazard) {
+                        if (hazard.type === 'Dynamite') {
                             handleDynamiteExplosion(pos);
                         } else {
-                            gameState.obstacles = gameState.obstacles.filter(o => o.pos !== pos);
-                            gameState.obstacleCount--;
-                            alert(`${gameState.playerNames[players[gameState.currentPlayer]]}'s ${guardian.id} Rampage destroyed ${obstacle.type} at ${pos}`);
+                            gameState.hazards = gameState.hazards.filter(o => o.pos !== pos);
+                            gameState.availableHazards[hazard.type.toLowerCase().replace(' ', '-')]++;
+                            alert(`${gameState.playerNames[players[gameState.currentPlayer]]}'s ${vampire.id} Rampage destroyed ${hazard.type} at ${pos}`);
                         }
                     }
                 }
@@ -1262,17 +1334,17 @@
         function endTurn() {
             const player = players[gameState.currentPlayer];
             if (gameState.playerClasses[player] === 'Sheriff') {
-                const guardian = gameState.guardians[player].find(g => g.alive);
-                if (guardian) {
-                    const [col, row] = [guardian.pos.charCodeAt(0) - 64, parseInt(guardian.pos[1])];
+                const vampire = gameState.vampires[player].find(g => g.alive);
+                if (vampire) {
+                    const [col, row] = [vampire.pos.charCodeAt(0) - 64, parseInt(vampire.pos[1])];
                     let targetPos;
-                    if (guardian.facing === 'N' && row > 1) targetPos = `${String.fromCharCode(64 + col)}${row - 1}`;
-                    if (guardian.facing === 'S' && row < GRID_SIZE) targetPos = `${String.fromCharCode(64 + col)}${row + 1}`;
-                    if (guardian.facing === 'E' && col < GRID_SIZE) targetPos = `${String.fromCharCode(64 + col + 1)}${row}`;
-                    if (guardian.facing === 'W' && col > 1) targetPos = `${String.fromCharCode(64 + col - 1)}${row}`;
-                    if (targetPos && canMove(guardian, targetPos)) {
-                        guardian.pos = targetPos;
-                        alert(`${gameState.playerNames[player]}'s ${guardian.id} moved to ${targetPos} via Swift Justice`);
+                    if (vampire.facing === 'N' && row > 1) targetPos = `${String.fromCharCode(64 + col)}${row - 1}`;
+                    if (vampire.facing === 'S' && row < GRID_SIZE) targetPos = `${String.fromCharCode(64 + col)}${row + 1}`;
+                    if (vampire.facing === 'E' && col < GRID_SIZE) targetPos = `${String.fromCharCode(64 + col + 1)}${row}`;
+                    if (vampire.facing === 'W' && col > 1) targetPos = `${String.fromCharCode(64 + col - 1)}${row}`;
+                    if (targetPos && canMove(vampire, targetPos)) {
+                        vampire.pos = targetPos;
+                        alert(`${gameState.playerNames[player]}'s ${vampire.id} moved to ${targetPos} via Swift Justice`);
                     }
                 }
             }
@@ -1281,10 +1353,10 @@
             gameState.turn++;
             gameState.ap = apPerTurn[gameState.currentPlayer + 1];
             if (gameState.playerClasses[players[gameState.currentPlayer]] === 'Vigilante') {
-                const g1 = gameState.guardians[players[gameState.currentPlayer]][0];
-                const g2 = gameState.guardians[players[gameState.currentPlayer]][1];
-                const [col1, row1] = [g1.pos.charCodeAt(0) - 64, parseInt(g1.pos[1])];
-                const [col2, row2] = [g2.pos.charCodeAt(0) - 64, parseInt(g2.pos[1])];
+                const v1 = gameState.vampires[players[gameState.currentPlayer]][0];
+                const v2 = gameState.vampires[players[gameState.currentPlayer]][1];
+                const [col1, row1] = [v1.pos.charCodeAt(0) - 64, parseInt(v1.pos[1])];
+                const [col2, row2] = [v2.pos.charCodeAt(0) - 64, parseInt(v2.pos[1])];
                 if (Math.abs(col1 - col2) <= 2 && Math.abs(row1 - row2) <= 2) {
                     gameState.ap += 1;
                     gameState.bloodBrothersActive = true;
@@ -1297,7 +1369,7 @@
                 gameState.ap = Math.min(gameState.ap, gameState.playerCount === 2 ? 8 : 10);
                 delete gameState.usedAbilities[players[gameState.currentPlayer]]['Contract Payoff'];
             }
-            gameState.selectedGuardian = null;
+            gameState.selectedVampire = null;
             gameState.selectedAction = null;
             gameState.actionsThisTurn = [];
             gameState.turnHistory = [];
@@ -1312,15 +1384,15 @@
         function undoTurn() {
             if (gameState.actionsThisTurn.length === 0) return;
             const lastState = gameState.actionsThisTurn.pop();
-            gameState.guardians = JSON.parse(JSON.stringify(lastState.guardians));
+            gameState.vampires = JSON.parse(JSON.stringify(lastState.vampires));
             gameState.bloodwells = JSON.parse(JSON.stringify(lastState.bloodwells));
-            gameState.obstacles = JSON.parse(JSON.stringify(lastState.obstacles));
-            gameState.obstacleCount = lastState.obstacleCount;
+            gameState.hazards = JSON.parse(JSON.stringify(lastState.hazards));
             gameState.cursed = JSON.parse(JSON.stringify(lastState.cursed));
             gameState.usedAbilities = JSON.parse(JSON.stringify(lastState.usedAbilities));
             gameState.ap = lastState.ap;
-            gameState.silverSlugs = JSON.parse(JSON.stringify(lastState.silverSlugs));
-            gameState.selectedGuardian = null;
+            gameState.silverBullets = JSON.parse(JSON.stringify(lastState.silverBullets));
+            gameState.availableHazards = JSON.parse(JSON.stringify(lastState.availableHazards));
+            gameState.selectedVampire = null;
             gameState.selectedAction = null;
             renderGrid();
             updateGameInfo();
@@ -1333,7 +1405,6 @@
             document.getElementById('current-player').textContent = gameState.playerNames[players[gameState.currentPlayer]];
             document.getElementById('ap-left').textContent = gameState.ap;
             document.getElementById('turn').textContent = gameState.turn;
-            document.getElementById('obstacle-count').textContent = gameState.obstacleCount;
         }
 
         function updateClassInfo() {
@@ -1368,14 +1439,16 @@
         function showVictoryMessage(winner) {
             const messageDiv = document.getElementById('victory-message');
             messageDiv.innerHTML = `
-                Victory! ${gameState.playerNames[winner]} Wins! All enemy Bloodwells destroyed.
+                Victory! ${gameState.playerNames[winner]} Wins! All enemy Bloodwells or Vampires destroyed.
                 <button onclick="restartGame()">Restart Game</button>
             `;
             messageDiv.style.display = 'block';
         }
 
         function checkGameState() {
-            const remainingPlayers = players.slice(0, gameState.playerCount).filter(p => gameState.bloodwells[p].length > 0);
+            const remainingPlayers = players.slice(0, gameState.playerCount).filter(p => 
+                gameState.bloodwells[p].length > 0 && gameState.vampires[p].some(v => v.alive)
+            );
             if (remainingPlayers.length === 1) {
                 showVictoryMessage(remainingPlayers[0]);
             }
@@ -1391,20 +1464,25 @@
                 turn: 1,
                 ap: apPerTurn[1],
                 playerCount: 0,
-                guardians: {},
+                vampires: {},
                 bloodwells: {},
-                obstacles: [],
-                obstacleCount: 0,
-                selectedGuardian: null,
+                hazards: [],
+                selectedVampire: null,
                 selectedAction: null,
                 playerClasses: {},
                 playerNames: {},
-                silverSlugs: {},
+                silverBullets: {},
                 cursed: {},
                 usedAbilities: {},
                 layout: null,
                 turnHistory: [],
-                actionsThisTurn: []
+                actionsThisTurn: [],
+                availableHazards: {
+                    tombstone: 4,
+                    carcass: 4,
+                    'grave-dust': 4,
+                    dynamite: 3
+                }
             };
             renderSetupScreen();
         }
